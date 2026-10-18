@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>Gestionar cita · Axis by MJ</title>
+  <link rel="icon" href="img/icono.png" />
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&family=Montserrat:wght@500;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root { --medianoche: #1a2f5b; --real: #3a5ba0; --glaciar: #8ecae6; --fondo: #f3f8fc; }
+    * { box-sizing: border-box; margin: 0; }
+    body {
+      font-family: "Montserrat", Arial, sans-serif; color: var(--medianoche); background: var(--fondo);
+      min-height: 100vh; display: grid; place-items: center; padding: 24px 16px;
+    }
+    .caja { background: #fff; border-radius: 28px; padding: 40px 28px; max-width: 460px; width: 100%; text-align: center; box-shadow: 0 14px 34px rgba(26, 47, 91, .14); }
+    .caja img { height: 44px; margin: 0 auto 28px; display: block; }
+    h1 { font-size: 1.7rem; line-height: 1.2; }
+    .mano { font-family: "Dancing Script", cursive; font-size: 1.6rem; color: var(--real); display: block; margin-top: 6px; }
+    p { color: #4a5b7a; margin-top: 14px; line-height: 1.5; }
+    .botones { display: grid; gap: 12px; margin-top: 26px; }
+    .boton {
+      display: block; padding: 15px 24px; border-radius: 999px; border: 0; cursor: pointer; text-decoration: none;
+      font: 700 1rem "Montserrat", sans-serif; color: #fff;
+    }
+    .confirmar { background: #2fbf71; }
+    .rechazar { background: #c0392b; }
+    .ws { background: #25d366; }
+    .boton:disabled { opacity: .6; cursor: wait; }
+  </style>
+</head>
+<body>
+  <main class="caja">
+    <img src="img/logo-horizontal.png" alt="Axis by MJ" />
+    <h1 id="titulo">Cargando…</h1>
+    <span class="mano" id="mano"></span>
+    <p id="detalle"></p>
+    <div class="botones" id="botones"></div>
+  </main>
+
+  <script>
+    // Misma dirección que URL_RESERVAS en index.html
+    var URL_RESERVAS = "https://script.google.com/macros/s/AKfycbz_ci6rzgGCiMc2pQqcd1db88Cpu5Aet36t7Zss71NZFO4xzZMrDA-lOWlrwDcRhQg/exec";
+
+    var q = new URLSearchParams(location.search);
+    var accion = q.get("accion");
+    var $ = function (id) { return document.getElementById(id); };
+
+    function boton(texto, clase, alHacerClic, enlace) {
+      var b = document.createElement(enlace ? "a" : "button");
+      b.className = "boton " + clase;
+      b.textContent = texto;
+      if (enlace) { b.href = enlace; b.target = "_blank"; b.rel = "noopener"; }
+      else b.onclick = alHacerClic;
+      $("botones").appendChild(b);
+      return b;
+    }
+
+    if (accion !== "confirmar" && accion !== "rechazar") {
+      $("titulo").textContent = "Enlace no válido";
+    } else {
+      var confirmar = accion === "confirmar";
+      $("titulo").textContent = confirmar ? "¿Confirmar esta cita?" : "¿Rechazar esta cita?";
+      $("mano").textContent = confirmar ? "al paciente le llegará un correo" : "se borrará del calendario";
+      $("detalle").textContent = confirmar
+        ? "La cita pasará a verde en el calendario y le enviaremos la confirmación al paciente."
+        : "La cita se borrará del calendario y le enviaremos un correo al paciente para buscar otra hora.";
+      var b = boton(confirmar ? "Sí, confirmar" : "Sí, rechazar", confirmar ? "confirmar" : "rechazar", function () {
+        b.disabled = true;
+        b.textContent = "Un momento…";
+        var url = URL_RESERVAS + "?formato=json&accion=" + accion +
+          "&id=" + encodeURIComponent(q.get("id") || "") + "&clave=" + encodeURIComponent(q.get("clave") || "");
+        fetch(url)
+          .then(function (r) { return r.json(); })
+          .then(function (r) {
+            $("botones").innerHTML = "";
+            $("titulo").textContent = r.mensaje;
+            $("mano").textContent = r.ok ? "listo" : "";
+            $("detalle").textContent = r.detalle || "";
+            if (r.ws) boton(r.textoWs, "ws", null, r.ws);
+          })
+          .catch(function () {
+            b.disabled = false;
+            b.textContent = confirmar ? "Sí, confirmar" : "Sí, rechazar";
+            $("detalle").textContent = "No pudimos conectar con el calendario. Revisa tu internet e inténtalo de nuevo.";
+          });
+      });
+    }
+  </script>
+</body>
+</html>

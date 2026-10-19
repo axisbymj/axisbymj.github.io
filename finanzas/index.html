@@ -1,0 +1,799 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#1A2F5B" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Axis Finanzas" />
+  <title>Axis Finanzas</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icono-192.png" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&family=Montserrat:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --medianoche: #1a2f5b; --real: #3a5ba0; --glaciar: #8ecae6; --fondo: #f3f8fc; --blanco: #fff;
+      --texto2: #4a5b7a; --suave: #8a97b1; --linea: #e3ebf3;
+      --verde: #1e7a47; --verde-f: #dff6e9; --ambar: #8a6500; --ambar-f: #fff4d6; --rojo: #a93226; --rojo-f: #fde8e6;
+      --sombra: 0 10px 28px rgba(26, 47, 91, .10);
+    }
+    * { box-sizing: border-box; margin: 0; -webkit-tap-highlight-color: transparent; }
+    html, body { background: var(--fondo); }
+    body {
+      font-family: "Montserrat", Arial, sans-serif; color: var(--medianoche); min-height: 100vh;
+      padding-bottom: calc(96px + env(safe-area-inset-bottom));
+    }
+    button, input, select { font: inherit; color: inherit; }
+    button { cursor: pointer; border: 0; background: none; }
+    .oculto { display: none !important; }
+
+    /* Encabezado */
+    header {
+      background: linear-gradient(135deg, var(--medianoche) 0%, var(--real) 70%, #5f8fc4 100%); color: #fff;
+      padding: calc(18px + env(safe-area-inset-top)) 18px 64px; border-radius: 0 0 32px 32px;
+    }
+    .barra { display: flex; align-items: center; gap: 12px; max-width: 560px; margin: 0 auto; }
+    .barra img { width: 40px; height: 40px; }
+    .barra .nombre { flex: 1; line-height: 1.15; }
+    .barra .nombre b { display: block; font-size: 1.05rem; letter-spacing: .5px; }
+    .barra .nombre span { font-family: "Dancing Script", cursive; font-size: 1.25rem; color: var(--glaciar); }
+    .icono-boton {
+      width: 42px; height: 42px; border-radius: 50%; background: rgba(255, 255, 255, .14); color: #fff;
+      display: grid; place-items: center; font-size: 1.1rem;
+    }
+    .girando { animation: girar 1s linear infinite; }
+    @keyframes girar { to { transform: rotate(360deg); } }
+
+    main { max-width: 560px; margin: -46px auto 0; padding: 0 16px; }
+    .tarjeta { background: var(--blanco); border-radius: 24px; padding: 20px; box-shadow: var(--sombra); margin-bottom: 16px; }
+    h2 { font-size: 1.05rem; margin-bottom: 4px; }
+    .sub { color: var(--suave); font-size: .82rem; }
+    .mano { font-family: "Dancing Script", cursive; color: var(--real); font-size: 1.35rem; }
+
+    /* Plata en mano */
+    .hero { text-align: center; padding: 24px 20px 20px; }
+    .hero .etiqueta { font-size: .78rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--suave); font-weight: 700; }
+    .hero .grande { font-size: 2.6rem; font-weight: 800; margin: 6px 0 2px; letter-spacing: -1px; }
+    .hero .linea-color { height: 4px; border-radius: 2px; margin: 14px auto 16px; width: 70%; background: linear-gradient(90deg, var(--medianoche), var(--real), var(--glaciar)); }
+    .pares { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .par { background: var(--fondo); border-radius: 16px; padding: 12px 10px; }
+    .par small { display: block; font-size: .72rem; color: var(--texto2); font-weight: 600; }
+    .par b { font-size: 1.05rem; }
+
+    /* Cuadritos del mes */
+    .cuadros { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+    .cuadro { border: 1.5px solid var(--linea); border-radius: 18px; padding: 12px 14px; }
+    .cuadro small { display: block; font-size: .75rem; color: var(--texto2); font-weight: 600; }
+    .cuadro b { display: block; font-size: 1.15rem; margin-top: 2px; }
+    .cuadro.destacado { background: var(--medianoche); border-color: var(--medianoche); color: #fff; grid-column: span 2; display: flex; justify-content: space-between; align-items: center; }
+    .cuadro.destacado small { color: var(--glaciar); }
+
+    .fila { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--linea); }
+    .fila:first-of-type { border-top: 0; }
+    .fila .info { flex: 1; min-width: 0; }
+    .fila .info b { display: block; font-size: .95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .fila .info small { color: var(--suave); font-size: .78rem; }
+    .fila .valor { font-weight: 800; white-space: nowrap; }
+    .avatar { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; flex: none; background: #e6f3fa; color: var(--real); }
+
+    .aviso {
+      display: flex; align-items: center; gap: 12px; background: var(--ambar-f); color: var(--ambar);
+      border-radius: 20px; padding: 14px 16px; margin-bottom: 16px; font-weight: 700; font-size: .9rem; width: 100%; text-align: left;
+    }
+    .aviso span:last-child { margin-left: auto; font-size: 1.2rem; }
+
+    .boton {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-radius: 999px;
+      padding: 10px 16px; font-weight: 700; font-size: .85rem; background: var(--fondo); color: var(--medianoche);
+    }
+    .boton.principal { background: var(--medianoche); color: #fff; }
+    .boton.verde { background: var(--verde-f); color: var(--verde); }
+    .boton.rojo { background: var(--rojo-f); color: var(--rojo); }
+    .boton.ancho { width: 100%; padding: 16px; font-size: 1rem; }
+    .boton:disabled { opacity: .55; }
+    .enlace { color: var(--suave); font-size: .8rem; text-decoration: underline; padding: 6px; }
+
+    .pildora { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: .7rem; font-weight: 700; }
+    .pildora.ambar { background: var(--ambar-f); color: var(--ambar); }
+    .pildora.rojo { background: var(--rojo-f); color: var(--rojo); }
+    .pildora.verde { background: var(--verde-f); color: var(--verde); }
+
+    /* Citas */
+    .cita { padding: 16px 0; border-top: 1px solid var(--linea); }
+    .cita:first-of-type { border-top: 0; padding-top: 4px; }
+    .cita .cuando { font-size: .78rem; color: var(--real); font-weight: 700; }
+    .derecha { display: grid; justify-items: end; gap: 6px; }
+    .cita .quien { font-size: 1.05rem; font-weight: 800; margin: 2px 0; }
+    .cita .que { font-size: .82rem; color: var(--texto2); }
+    .cita .acciones { display: flex; gap: 8px; margin-top: 12px; align-items: center; flex-wrap: wrap; }
+    .vacio { text-align: center; padding: 26px 10px; color: var(--texto2); }
+    .vacio .emoji { font-size: 2.4rem; display: block; margin-bottom: 6px; }
+
+    /* Agregar */
+    .opciones { display: grid; gap: 12px; }
+    .opcion { display: flex; align-items: center; gap: 14px; background: var(--blanco); border-radius: 22px; padding: 18px; box-shadow: var(--sombra); text-align: left; width: 100%; }
+    .opcion .ico { width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; font-size: 1.5rem; flex: none; }
+    .opcion b { display: block; font-size: 1.05rem; }
+    .opcion small { color: var(--texto2); font-size: .8rem; }
+
+    /* Mes a mes */
+    .mes { padding: 12px 0; border-top: 1px solid var(--linea); width: 100%; text-align: left; display: block; }
+    .mes:first-of-type { border-top: 0; }
+    .mes .arriba { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+    .mes .arriba b { font-size: .95rem; }
+    .mes .arriba span { font-weight: 800; }
+    .mes .barra-mes { height: 8px; border-radius: 4px; background: var(--fondo); margin: 8px 0 6px; overflow: hidden; }
+    .mes .barra-mes i { display: block; height: 100%; border-radius: 4px; background: var(--real); }
+    .mes .detalle { display: flex; justify-content: space-between; font-size: .75rem; color: var(--texto2); gap: 6px; flex-wrap: wrap; }
+    .mes .extra { display: none; margin-top: 10px; background: var(--fondo); border-radius: 14px; padding: 10px 12px; font-size: .8rem; color: var(--texto2); }
+    .mes.abierto .extra { display: block; }
+    .mes .extra div { display: flex; justify-content: space-between; padding: 3px 0; }
+
+    .segmentos { display: flex; background: var(--fondo); border-radius: 999px; padding: 4px; gap: 4px; }
+    .segmentos button { flex: 1; padding: 10px 6px; border-radius: 999px; font-weight: 700; font-size: .82rem; color: var(--texto2); }
+    .segmentos button.activo { background: var(--blanco); color: var(--medianoche); box-shadow: 0 2px 8px rgba(26, 47, 91, .12); }
+
+    /* Menú de abajo */
+    nav {
+      position: fixed; left: 0; right: 0; bottom: 0; background: rgba(255, 255, 255, .96); backdrop-filter: blur(10px);
+      border-top: 1px solid var(--linea); padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); z-index: 10;
+    }
+    nav .dentro { max-width: 560px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); }
+    nav button { display: grid; justify-items: center; gap: 2px; font-size: .7rem; font-weight: 700; color: var(--suave); padding: 4px 0; position: relative; }
+    nav button .ico { font-size: 1.3rem; filter: grayscale(1); opacity: .6; }
+    nav button.activo { color: var(--medianoche); }
+    nav button.activo .ico { filter: none; opacity: 1; }
+    nav .mas .ico {
+      width: 48px; height: 48px; margin-top: -24px; border-radius: 50%; display: grid; place-items: center; color: #fff;
+      background: linear-gradient(135deg, var(--medianoche), var(--real)); box-shadow: 0 8px 18px rgba(26, 47, 91, .35);
+      filter: none; opacity: 1; font-size: 1.7rem; font-weight: 500;
+    }
+    .globo { position: absolute; top: 0; left: 55%; background: #e2574c; color: #fff; border-radius: 999px; font-size: .65rem; padding: 1px 6px; }
+
+    /* Hoja que sube (formularios) */
+    .velo { position: fixed; inset: 0; background: rgba(15, 28, 56, .45); z-index: 20; opacity: 0; pointer-events: none; transition: opacity .2s; }
+    .velo.abierto { opacity: 1; pointer-events: auto; }
+    .hoja {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 21; background: var(--blanco); border-radius: 28px 28px 0 0;
+      max-height: 92vh; overflow-y: auto; padding: 10px 20px calc(24px + env(safe-area-inset-bottom));
+      transform: translateY(105%); transition: transform .25s ease; max-width: 600px; margin: 0 auto;
+    }
+    .hoja.abierto { transform: none; }
+    .hoja .asa { width: 44px; height: 5px; border-radius: 3px; background: var(--linea); margin: 0 auto 16px; }
+    .hoja h3 { font-size: 1.3rem; }
+    .campo { display: block; margin-top: 16px; }
+    .campo > span { display: block; font-size: .78rem; font-weight: 700; color: var(--texto2); margin-bottom: 6px; }
+    .campo input, .campo select {
+      width: 100%; border: 1.5px solid var(--linea); border-radius: 14px; padding: 13px 14px; font-size: 1rem; background: var(--blanco); outline: none;
+    }
+    .campo input:focus, .campo select:focus { border-color: var(--glaciar); box-shadow: 0 0 0 3px rgba(142, 202, 230, .35); }
+    .dos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .dinero { position: relative; }
+    .dinero::before { content: "$"; position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-weight: 700; color: var(--suave); }
+    .dinero input { padding-left: 28px; font-weight: 700; }
+    .total { margin-top: 16px; background: var(--fondo); border-radius: 16px; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; }
+    .total b { font-size: 1.3rem; }
+    .contador { display: flex; align-items: center; border: 1.5px solid var(--linea); border-radius: 14px; overflow: hidden; }
+    .contador button { width: 48px; height: 48px; font-size: 1.3rem; font-weight: 700; color: var(--real); }
+    .contador input { flex: 1; min-width: 0; border: 0 !important; text-align: center; font-weight: 800; padding: 0 !important; box-shadow: none !important; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chips button { padding: 9px 14px; border-radius: 999px; border: 1.5px solid var(--linea); font-size: .85rem; font-weight: 600; color: var(--texto2); }
+    .chips button.activo { background: var(--medianoche); border-color: var(--medianoche); color: #fff; }
+    .hoja .boton.ancho { margin-top: 22px; }
+
+    /* Entrada */
+    #entrada { min-height: 100vh; display: grid; place-items: center; padding: 24px 16px; background: linear-gradient(160deg, var(--medianoche), var(--real) 60%, var(--glaciar)); }
+    #entrada .caja { background: #fff; border-radius: 30px; padding: 34px 24px; width: 100%; max-width: 400px; text-align: center; box-shadow: 0 20px 50px rgba(0, 0, 0, .25); }
+    #entrada .caja img { width: 210px; max-width: 80%; }
+    #entrada .chips { justify-content: center; margin-top: 8px; }
+    #entrada .chips button { padding: 12px 22px; font-size: 1rem; }
+    .error { color: var(--rojo); font-size: .85rem; margin-top: 12px; min-height: 1em; }
+
+    .toast {
+      position: fixed; left: 50%; bottom: calc(100px + env(safe-area-inset-bottom)); transform: translate(-50%, 30px); opacity: 0;
+      background: var(--medianoche); color: #fff; padding: 13px 20px; border-radius: 999px; font-weight: 700; font-size: .9rem;
+      z-index: 30; transition: .25s; max-width: calc(100% - 32px); text-align: center; pointer-events: none;
+    }
+    .toast.ver { opacity: 1; transform: translate(-50%, 0); }
+    .toast.mal { background: var(--rojo); }
+    .pie { text-align: center; color: var(--suave); font-size: .72rem; margin: 6px 0 20px; }
+  </style>
+</head>
+<body>
+  <!-- Entrada con clave -->
+  <section id="entrada" class="oculto">
+    <div class="caja">
+      <img src="../img/logo-horizontal.png" alt="Axis by MJ" />
+      <p class="mano" style="margin-top:10px">nuestras finanzas</p>
+      <label class="campo" style="text-align:left"><span>¿Quién eres?</span></label>
+      <div class="chips" id="quienes">
+        <button type="button" data-quien="Manuel">Manuel</button>
+        <button type="button" data-quien="Juliana">Juliana</button>
+      </div>
+      <label class="campo" style="text-align:left"><span>Clave</span>
+        <input id="clave" type="password" autocomplete="current-password" placeholder="Escribe la clave" />
+      </label>
+      <button class="boton principal ancho" id="entrar" style="margin-top:20px">Entrar</button>
+      <p class="error" id="errorEntrada"></p>
+    </div>
+  </section>
+
+  <div id="app" class="oculto">
+    <header>
+      <div class="barra">
+        <img src="icono-192.png" alt="" style="border-radius:12px" />
+        <div class="nombre"><b>AXIS FINANZAS</b><span id="saludo">hola</span></div>
+        <button class="icono-boton" id="actualizar" aria-label="Actualizar">↻</button>
+      </div>
+    </header>
+
+    <main>
+      <!-- INICIO -->
+      <section data-vista="inicio">
+        <div class="tarjeta hero">
+          <div class="etiqueta">Plata en mano</div>
+          <div class="grande" id="enMano">—</div>
+          <div class="sub">lo que debería haber entre los dos hoy</div>
+          <div class="linea-color"></div>
+          <div class="pares">
+            <div class="par"><small>Saldo en el Excel</small><b id="saldo">—</b></div>
+            <div class="par"><small>Por cobrar</small><b id="porCobrar">—</b></div>
+          </div>
+        </div>
+
+        <button class="aviso oculto" id="avisoCitas" data-ir="citas"><span>📅</span><span id="textoAvisoCitas"></span><span>›</span></button>
+
+        <div class="tarjeta">
+          <h2>Este mes · <span id="nombreMes"></span></h2>
+          <div class="cuadros">
+            <div class="cuadro"><small>Entró 💵</small><b id="mIngresos">—</b></div>
+            <div class="cuadro"><small>Sesiones 💆</small><b id="mSesiones">—</b></div>
+            <div class="cuadro"><small>Gastos 💸</small><b id="mGastos">—</b></div>
+            <div class="cuadro"><small>Pagos a socios 👥</small><b id="mPagos">—</b></div>
+            <div class="cuadro destacado"><div><small>Le quedó a Axis</small><b id="mQueda">—</b></div><span class="mano" style="color:var(--glaciar)">este mes</span></div>
+          </div>
+        </div>
+
+        <div class="tarjeta">
+          <h2>Quién atendió este mes</h2>
+          <div id="porPersona"></div>
+        </div>
+
+        <div class="tarjeta">
+          <h2>Por cobrar</h2>
+          <p class="sub">Terapias que todavía no están pagadas</p>
+          <div id="pendientes" style="margin-top:8px"></div>
+        </div>
+
+        <div class="tarjeta">
+          <h2>Pagos a cada socio</h2>
+          <p class="sub">Todo lo que Axis les ha pagado en el año</p>
+          <div id="pagosSocios" style="margin-top:8px"></div>
+        </div>
+      </section>
+
+      <!-- CITAS -->
+      <section data-vista="citas" class="oculto">
+        <div class="tarjeta">
+          <h2>Citas del calendario</h2>
+          <p class="sub">De los últimos 30 días que aún no se han anotado. Marca cada una.</p>
+          <div id="listaCitas" style="margin-top:12px"></div>
+        </div>
+      </section>
+
+      <!-- AGREGAR -->
+      <section data-vista="agregar" class="oculto">
+        <div class="tarjeta" style="padding:18px 20px">
+          <h2>¿Qué quieres anotar?</h2>
+          <p class="mano">todo queda en el Excel</p>
+        </div>
+        <div class="opciones">
+          <button class="opcion" data-form="terapia"><span class="ico" style="background:#e6f3fa">💆</span><span><b>Una terapia</b><small>Una sesión que no estaba en el calendario</small></span></button>
+          <button class="opcion" data-form="gasto"><span class="ico" style="background:var(--rojo-f)">💸</span><span><b>Un gasto</b><small>Transporte, insumos, celular…</small></span></button>
+          <button class="opcion" data-form="pago"><span class="ico" style="background:var(--verde-f)">👥</span><span><b>Un pago a Manuel o Juliana</b><small>Plata que sale de Axis para uno de los dos</small></span></button>
+        </div>
+      </section>
+
+      <!-- MESES -->
+      <section data-vista="meses" class="oculto">
+        <div class="tarjeta">
+          <h2>Mes a mes · <span id="anio"></span></h2>
+          <p class="sub">La barra es lo que entró. Toca un mes para ver el detalle.</p>
+          <div id="listaMeses" style="margin-top:8px"></div>
+        </div>
+        <div class="tarjeta">
+          <h2>Últimos movimientos</h2>
+          <div class="segmentos" id="segMov" style="margin:12px 0 6px">
+            <button class="activo" data-mov="terapias">Terapias</button>
+            <button data-mov="gastos">Gastos</button>
+            <button data-mov="pagos">Pagos</button>
+          </div>
+          <div id="listaMov"></div>
+        </div>
+        <p class="pie">Para corregir algo que quedó mal, se arregla directo en el Excel.<br /><button class="enlace" id="salir">Cerrar sesión en este celular</button></p>
+      </section>
+      <p class="pie" id="actualizado"></p>
+    </main>
+
+    <nav>
+      <div class="dentro">
+        <button data-ir="inicio" class="activo"><span class="ico">🏠</span>Inicio</button>
+        <button data-ir="citas"><span class="ico">📅</span>Citas<span class="globo oculto" id="globoCitas"></span></button>
+        <button data-ir="agregar" class="mas"><span class="ico">+</span>Agregar</button>
+        <button data-ir="meses"><span class="ico">📊</span>Meses</button>
+      </div>
+    </nav>
+  </div>
+
+  <div class="velo" id="velo"></div>
+  <div class="hoja" id="hoja" role="dialog" aria-modal="true"><div class="asa"></div><div id="contenidoHoja"></div></div>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // Dirección del programa de Google de finanzas (Implementar → Gestionar implementaciones → URL de la app web)
+    var URL_FINANZAS = "https://script.google.com/macros/s/AKfycbxhjVMfSuhIB9lhwlI1QEAhAJV1TLh6-oiUGdlLKu232GrPkyIf-GM9oxKWyJ9dCp8/exec";
+
+    var MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+    var D = null; // los datos que manda el programa
+    var sesion = leer("axis-fin-sesion") || {};
+    var $ = function (id) { return document.getElementById(id); };
+
+    // ——— Guardar en el celular (puede fallar en modo incógnito: no pasa nada) ———
+    function leer(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
+    function guardar(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+
+    // ——— Formatos ———
+    function plata(n) { n = Math.round(n || 0); return (n < 0 ? "−$" : "$") + Math.abs(n).toLocaleString("es-CO"); }
+    function corto(n) {
+      n = Math.round(n || 0);
+      if (Math.abs(n) >= 1000000) return "$" + (n / 1000000).toLocaleString("es-CO", { maximumFractionDigits: 1 }) + " M";
+      return plata(n);
+    }
+    function primerNombre(p) { return String(p || "").split(" ")[0]; }
+    function hoyISO() {
+      var d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+      return d.toISOString().slice(0, 10);
+    }
+    function fechaBonita(iso, hora) {
+      if (!/^\d{4}-\d{2}-\d{2}/.test(iso || "")) return iso || "";
+      var p = iso.split("-"), d = new Date(+p[0], +p[1] - 1, +p[2]);
+      var t = d.toLocaleDateString("es-CO", { weekday: "short", day: "numeric", month: "short" }).replace(/\./g, "");
+      if (hora) {
+        var h = +hora.slice(0, 2), m = hora.slice(3, 5);
+        t += " · " + (h % 12 || 12) + ":" + m + (h < 12 ? " a. m." : " p. m.");
+      }
+      return t.charAt(0).toUpperCase() + t.slice(1);
+    }
+    function numero(t) { return Number(String(t || "").replace(/\D/g, "")) || 0; }
+    function el(etiqueta, clase, texto) {
+      var e = document.createElement(etiqueta);
+      if (clase) e.className = clase;
+      if (texto != null) e.textContent = texto;
+      return e;
+    }
+
+    // ——— Hablar con el programa de Google ———
+    function api(accion, extra) {
+      var cuerpo = Object.assign({ clave: sesion.clave, accion: accion, quien: sesion.quien }, extra || {});
+      return fetch(URL_FINANZAS, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(cuerpo) })
+        .then(function (r) { return r.json(); })
+        .then(function (r) {
+          if (!r.ok) {
+            var e = new Error(r.error === "clave" ? "Clave incorrecta" : r.detalle || "Algo salió mal");
+            e.clave = r.error === "clave";
+            throw e;
+          }
+          return r;
+        });
+    }
+
+    function cargar(silencioso) {
+      $("actualizar").firstChild.textContent = "↻";
+      $("actualizar").classList.add("girando");
+      return api("datos")
+        .then(function (r) { recibir(r); if (!silencioso) aviso("Al día ✨"); })
+        .catch(function (e) {
+          if (e.clave) return salir();
+          aviso(e instanceof TypeError ? "Sin conexión. Mostrando lo último guardado." : e.message, true);
+        })
+        .finally(function () { $("actualizar").classList.remove("girando"); });
+    }
+
+    function recibir(r) {
+      D = r;
+      guardar("axis-fin-datos", r);
+      // el nombre completo de quien usa el celular (para "quién atendió")
+      var completo = (r.profesionales || []).filter(function (p) { return primerNombre(p) === primerNombre(sesion.quien); })[0];
+      if (completo && completo !== sesion.quien) { sesion.quien = completo; guardar("axis-fin-sesion", sesion); }
+      pintar();
+    }
+
+    // ——— Pintar las pantallas ———
+    function pintar() {
+      if (!D) return;
+      var t = D.totales;
+      $("saludo").textContent = "hola, " + primerNombre(sesion.quien);
+      $("enMano").textContent = plata(t.enMano);
+      $("saldo").textContent = plata(t.saldo);
+      $("porCobrar").textContent = plata(t.porCobrar);
+
+      var m = D.meses.filter(function (x) { return x.mes === D.mesActual; })[0] || {};
+      $("nombreMes").textContent = D.mesActual;
+      $("mIngresos").textContent = plata(m.ingresos);
+      $("mSesiones").textContent = m.sesiones || 0;
+      $("mGastos").textContent = plata(m.gastos);
+      $("mPagos").textContent = plata(m.pagos);
+      $("mQueda").textContent = plata((m.ingresos || 0) - (m.gastos || 0) - (m.pagos || 0));
+
+      var pp = $("porPersona"); pp.innerHTML = "";
+      (m.porPersona || []).forEach(function (p) {
+        pp.appendChild(fila(primerNombre(p.persona), p.sesiones + (p.sesiones === 1 ? " sesión" : " sesiones"), plata(p.ingresos)));
+      });
+
+      var pe = $("pendientes"); pe.innerHTML = "";
+      if (!D.pendientes.length) pe.appendChild(vacio("🎉", "Nadie les debe nada"));
+      D.pendientes.forEach(function (x) {
+        var f = fila(x.cliente, fechaBonita(x.fecha) + (x.estado === "Incompleto" ? " · pagó una parte" : ""));
+        var der = el("div", "derecha");
+        der.appendChild(el("span", "valor", plata(x.total)));
+        var b = el("button", "boton verde", "Ya pagó");
+        b.style.padding = "7px 14px";
+        b.onclick = function () { cobrar(x, b); };
+        der.appendChild(b);
+        f.appendChild(der);
+        pe.appendChild(f);
+      });
+
+      var ps = $("pagosSocios"); ps.innerHTML = "";
+      D.pagosPorPersona.forEach(function (p) { ps.appendChild(fila(primerNombre(p.persona), "pagado por Axis", plata(p.total))); });
+
+      // Citas
+      var n = D.citas.length;
+      $("globoCitas").textContent = n;
+      $("globoCitas").classList.toggle("oculto", !n);
+      $("avisoCitas").classList.toggle("oculto", !n);
+      $("textoAvisoCitas").textContent = n === 1 ? "Hay 1 cita por anotar" : "Hay " + n + " citas por anotar";
+      pintarCitas();
+      pintarMeses();
+      pintarMovimientos();
+      $("actualizado").textContent = "Actualizado: " + D.actualizado;
+    }
+
+    function fila(nombre, detalle, valor) {
+      var f = el("div", "fila");
+      f.appendChild(el("span", "avatar", (nombre || "?").charAt(0).toUpperCase()));
+      var info = el("div", "info");
+      info.appendChild(el("b", null, nombre));
+      info.appendChild(el("small", null, detalle));
+      f.appendChild(info);
+      if (valor != null) f.appendChild(el("span", "valor", valor));
+      return f;
+    }
+
+    function vacio(emoji, texto) {
+      var v = el("div", "vacio");
+      v.appendChild(el("span", "emoji", emoji));
+      v.appendChild(el("span", null, texto));
+      return v;
+    }
+
+    function pintarCitas() {
+      var l = $("listaCitas"); l.innerHTML = "";
+      if (!D.citas.length) return l.appendChild(vacio("✅", "Todas las citas están anotadas"));
+      D.citas.forEach(function (c) {
+        var d = el("div", "cita");
+        d.appendChild(el("div", "cuando", fechaBonita(c.fecha, c.hora)));
+        var q = el("div", "quien", c.cliente || c.titulo);
+        if (c.sinConfirmar) { q.appendChild(document.createTextNode(" ")); q.appendChild(el("span", "pildora ambar", "sin confirmar")); }
+        d.appendChild(q);
+        d.appendChild(el("div", "que", [c.titulo !== c.cliente ? "En el calendario: “" + c.titulo + "”" : "", c.direccion].filter(Boolean).join(" · ")));
+        var a = el("div", "acciones");
+        var si = el("button", "boton verde", "✅ Se hizo");
+        si.onclick = function () { formTerapia(c); };
+        var no = el("button", "boton rojo", "❌ No se hizo");
+        no.onclick = function () { formNoSeHizo(c); };
+        var ocultar = el("button", "enlace", "Ocultar");
+        ocultar.onclick = function () {
+          if (!confirm("¿Quitar \"" + (c.titulo || c.cliente) + "\" de la lista sin anotar nada? Úsalo si ya estaba en el Excel (por ejemplo, un paquete de varias sesiones) o si no era una terapia.")) return;
+          enviar("cita", { cita: c, resultado: "No es cita" });
+        };
+        a.appendChild(si); a.appendChild(no); a.appendChild(ocultar);
+        d.appendChild(a);
+        l.appendChild(d);
+      });
+    }
+
+    function pintarMeses() {
+      $("anio").textContent = D.anio;
+      var l = $("listaMeses"); l.innerHTML = "";
+      var actual = MESES.indexOf(D.mesActual);
+      var meses = D.meses.filter(function (m, i) { return i <= actual && (m.ingresos || m.gastos || m.pagos || i === actual); }).reverse();
+      var mayor = Math.max.apply(null, meses.map(function (m) { return m.ingresos; }).concat([1]));
+      meses.forEach(function (m) {
+        var queda = m.ingresos - m.gastos - m.pagos;
+        var b = el("button", "mes");
+        var arriba = el("div", "arriba");
+        arriba.appendChild(el("b", null, m.mes));
+        arriba.appendChild(el("span", null, plata(m.ingresos)));
+        b.appendChild(arriba);
+        var barra = el("div", "barra-mes"), i = el("i");
+        i.style.width = Math.max(2, m.ingresos / mayor * 100) + "%";
+        barra.appendChild(i); b.appendChild(barra);
+        var det = el("div", "detalle");
+        det.appendChild(el("span", null, m.sesiones + " sesiones"));
+        det.appendChild(el("span", null, "salió " + plata(m.gastos + m.pagos)));
+        var q = el("span", null, "quedó " + plata(queda));
+        q.style.fontWeight = "700"; q.style.color = queda < 0 ? "var(--rojo)" : "var(--verde)";
+        det.appendChild(q);
+        b.appendChild(det);
+        var extra = el("div", "extra");
+        [["Entró por terapias", m.ingresos], ["Gastos", -m.gastos], ["Pagos a socios", -m.pagos]].concat(
+          m.porPersona.map(function (p) { return ["  · Atendió " + primerNombre(p.persona) + " (" + p.sesiones + ")", p.ingresos]; })
+        ).forEach(function (r) {
+          var dv = el("div");
+          dv.appendChild(el("span", null, r[0]));
+          dv.appendChild(el("b", null, (r[1] < 0 ? "−" : "") + plata(Math.abs(r[1]))));
+          extra.appendChild(dv);
+        });
+        b.appendChild(extra);
+        b.onclick = function () { b.classList.toggle("abierto"); };
+        l.appendChild(b);
+      });
+    }
+
+    var tipoMov = "terapias";
+    function pintarMovimientos() {
+      var l = $("listaMov"); l.innerHTML = "";
+      var lista = D[tipoMov] || [];
+      if (!lista.length) return l.appendChild(vacio("📭", "Nada todavía"));
+      lista.forEach(function (x) {
+        var f;
+        if (tipoMov === "terapias") {
+          f = fila(x.cliente, fechaBonita(x.fecha) + " · " + primerNombre(x.prof) + " · " + x.sesiones + "×" + corto(x.unit), plata(x.total));
+          if (!/^al d[ií]a$/i.test(x.estado)) f.querySelector(".info small").appendChild(el("span", "pildora ambar", " " + x.estado));
+        } else if (tipoMov === "gastos") {
+          f = fila(x.descripcion, fechaBonita(x.fecha) + " · " + x.categoria + " · " + x.metodo, "−" + plata(x.valor));
+        } else {
+          f = fila(primerNombre(x.persona), x.mes + " " + (x.anio || ""), plata(x.valor));
+        }
+        l.appendChild(f);
+      });
+    }
+
+    // ——— Navegación ———
+    function ir(vista) {
+      document.querySelectorAll("[data-vista]").forEach(function (s) { s.classList.toggle("oculto", s.getAttribute("data-vista") !== vista); });
+      document.querySelectorAll("nav [data-ir]").forEach(function (b) { b.classList.toggle("activo", b.getAttribute("data-ir") === vista); });
+      window.scrollTo(0, 0);
+    }
+    document.querySelectorAll("[data-ir]").forEach(function (b) { b.onclick = function () { ir(b.getAttribute("data-ir")); }; });
+    document.querySelectorAll("[data-form]").forEach(function (b) {
+      b.onclick = function () { ({ terapia: formTerapia, gasto: formGasto, pago: formPago })[b.getAttribute("data-form")](); };
+    });
+    $("segMov").onclick = function (e) {
+      var b = e.target.closest("button"); if (!b) return;
+      tipoMov = b.getAttribute("data-mov");
+      this.querySelectorAll("button").forEach(function (x) { x.classList.toggle("activo", x === b); });
+      pintarMovimientos();
+    };
+    $("actualizar").onclick = function () { cargar(); };
+
+    // ——— Hoja que sube con un formulario ———
+    function abrirHoja(titulo, subtitulo) {
+      var c = $("contenidoHoja"); c.innerHTML = "";
+      c.appendChild(el("h3", null, titulo));
+      if (subtitulo) c.appendChild(el("p", "mano", subtitulo));
+      $("velo").classList.add("abierto"); $("hoja").classList.add("abierto");
+      return c;
+    }
+    function cerrarHoja() { $("velo").classList.remove("abierto"); $("hoja").classList.remove("abierto"); }
+    $("velo").onclick = cerrarHoja;
+
+    function campo(c, etiqueta, control) {
+      // los grupos de botones van en un div: dentro de un <label> el título "tocaría" el primer botón
+      var l = el(/^(INPUT|SELECT)$/.test(control.tagName) ? "label" : "div", "campo"); l.appendChild(el("span", null, etiqueta)); l.appendChild(control); c.appendChild(l); return control;
+    }
+    function entrada(tipo, valor, extra) {
+      var i = el("input"); i.type = tipo; if (valor != null) i.value = valor;
+      Object.keys(extra || {}).forEach(function (k) { i.setAttribute(k, extra[k]); });
+      return i;
+    }
+    function dinero(c, etiqueta, valor) {
+      var caja = el("div", "dinero");
+      var i = entrada("text", valor ? Math.round(valor).toLocaleString("es-CO") : "", { inputmode: "numeric", placeholder: "0" });
+      i.addEventListener("input", function () { var n = numero(i.value); i.value = n ? n.toLocaleString("es-CO") : ""; });
+      caja.appendChild(i);
+      campo(c, etiqueta, caja);
+      return i;
+    }
+    function lista(opciones, valor) {
+      var s = el("select");
+      opciones.forEach(function (o) { var op = el("option", null, o.texto || o); op.value = o.valor || o; s.appendChild(op); });
+      if (valor) s.value = valor;
+      return s;
+    }
+    function chips(c, etiqueta, opciones, valor) {
+      var caja = el("div", "chips"); var elegido = { valor: valor };
+      opciones.forEach(function (o) {
+        var b = el("button", o.valor === valor ? "activo" : "", o.texto); b.type = "button";
+        b.onclick = function () {
+          elegido.valor = o.valor;
+          caja.querySelectorAll("button").forEach(function (x) { x.classList.toggle("activo", x === b); });
+          if (elegido.alCambiar) elegido.alCambiar(o.valor);
+        };
+        caja.appendChild(b);
+      });
+      campo(c, etiqueta, caja);
+      return elegido;
+    }
+    function botonGuardar(c, texto, alGuardar) {
+      var b = el("button", "boton principal ancho", texto);
+      b.onclick = function () { alGuardar(b); };
+      c.appendChild(b);
+      return b;
+    }
+
+    function enviar(accion, datos, boton) {
+      if (boton) { boton.disabled = true; boton.dataset.texto = boton.textContent; boton.textContent = "Guardando…"; }
+      return api(accion, datos)
+        .then(function (r) { recibir(r); cerrarHoja(); aviso(r.mensaje || "Guardado"); return r; })
+        .catch(function (e) {
+          aviso(e instanceof TypeError ? "Sin conexión. No se guardó, inténtalo de nuevo." : e.message, true);
+          if (e.clave) salir();
+        })
+        .finally(function () { if (boton) { boton.disabled = false; boton.textContent = boton.dataset.texto; } });
+    }
+
+    // Terapia (desde una cita del calendario o nueva)
+    function formTerapia(cita) {
+      var c = abrirHoja(cita ? "Se hizo la terapia ✅" : "Nueva terapia", cita ? fechaBonita(cita.fecha, cita.hora) : "va a 05_Servicios");
+      var ultimo = function (nombre) { return D.ultimoPrecio[String(nombre || "").trim().toLowerCase()]; };
+      var precioDe = function (s) { return ((D.catalogo.filter(function (x) { return x.nombre === s; })[0]) || {}).precio || 0; };
+
+      var dl = el("datalist"); dl.id = "listaClientes";
+      D.clientes.forEach(function (n) { var o = el("option"); o.value = n; dl.appendChild(o); });
+      c.appendChild(dl);
+      var cliente = campo(c, "Paciente", entrada("text", cita ? cita.cliente : "", { list: "listaClientes", placeholder: "Nombre del paciente", autocomplete: "off" }));
+      var fecha = campo(c, "Fecha", entrada("date", cita ? cita.fecha : hoyISO()));
+      var prof = chips(c, "¿Quién atendió?", D.profesionales.map(function (p) { return { valor: p, texto: primerNombre(p) }; }),
+        D.profesionales.indexOf(sesion.quien) >= 0 ? sesion.quien : D.profesionales[0]);
+      var servicio = campo(c, "Servicio", lista(D.catalogo.map(function (x) { return x.nombre; }), cita && cita.servicio));
+      var duo = el("div", "dos"); c.appendChild(duo);
+      var cont = el("div", "contador");
+      var menos = el("button", null, "−"), mas = el("button", null, "+");
+      menos.type = mas.type = "button";
+      var sesiones = entrada("number", 1, { min: 1, max: 50, inputmode: "numeric" });
+      cont.appendChild(menos); cont.appendChild(sesiones); cont.appendChild(mas);
+      campo(duo, "Sesiones", cont);
+      var unit = dinero(duo, "Valor por sesión", 0);
+      var total = el("div", "total"); total.appendChild(el("span", null, "Total")); var tb = el("b"); total.appendChild(tb); c.appendChild(total);
+      var estado = chips(c, "¿Ya pagó?", [
+        { valor: "Al Día", texto: "Sí, pagó ✅" }, { valor: "Pendiente", texto: "Debe ⏳" }, { valor: "Incompleto", texto: "Pagó una parte" },
+      ], "Al Día");
+
+      var tocado = false;
+      unit.addEventListener("input", function () { tocado = true; sumar(); });
+      function sugerir() {
+        var u = ultimo(cliente.value);
+        if (u && !cita && D.catalogo.some(function (x) { return x.nombre === u.servicio; })) servicio.value = u.servicio;
+        if (!tocado) unit.value = Math.round((u && u.servicio === servicio.value ? u.unit : precioDe(servicio.value)) || 0).toLocaleString("es-CO");
+        sumar();
+      }
+      function sumar() { tb.textContent = plata(numero(unit.value) * (Number(sesiones.value) || 0)); }
+      cliente.addEventListener("change", sugerir);
+      servicio.addEventListener("change", function () { tocado = false; sugerir(); });
+      sesiones.addEventListener("input", sumar);
+      menos.onclick = function () { sesiones.value = Math.max(1, (+sesiones.value || 1) - 1); sumar(); };
+      mas.onclick = function () { sesiones.value = Math.min(50, (+sesiones.value || 0) + 1); sumar(); };
+      sugerir();
+
+      botonGuardar(c, "Guardar terapia", function (b) {
+        if (!cliente.value.trim()) return aviso("Falta el nombre del paciente", true);
+        if (!numero(unit.value)) return aviso("Falta el valor", true);
+        enviar("terapia", {
+          cliente: cliente.value.trim(), fecha: fecha.value, prof: prof.valor, servicio: servicio.value,
+          sesiones: +sesiones.value || 1, unit: numero(unit.value), estado: estado.valor, cita: cita || null,
+        }, b);
+      });
+    }
+
+    function formNoSeHizo(cita) {
+      var c = abrirHoja("No se hizo ❌", (cita.cliente || cita.titulo) + " · " + fechaBonita(cita.fecha, cita.hora));
+      c.appendChild(el("p", "sub", "No se anota como ingreso; queda registrado para saber cuántas citas se caen."));
+      var motivo = chips(c, "¿Qué pasó?", ["Canceló", "No llegó", "Se cambió de fecha", "La cancelamos nosotros", "Otro"].map(function (t) { return { valor: t, texto: t }; }), "Canceló");
+      botonGuardar(c, "Anotar", function (b) { enviar("cita", { cita: cita, resultado: "No se hizo", motivo: motivo.valor }, b); });
+    }
+
+    function formGasto() {
+      var c = abrirHoja("Nuevo gasto 💸", "va a 06_Gastos");
+      var desc = campo(c, "¿En qué se gastó?", entrada("text", "", { placeholder: "Ej.: Uber a domicilio, electrodos…" }));
+      var valor = dinero(c, "Valor", 0);
+      var fecha = campo(c, "Fecha", entrada("date", hoyISO()));
+      var cat = chips(c, "Categoría", D.categorias.map(function (t) { return { valor: t, texto: t }; }), "Transporte");
+      var nombresMetodo = { Debito: "Débito", Credito: "Crédito" };
+      var metodo = chips(c, "¿Cómo se pagó?", D.metodos.map(function (t) { return { valor: t, texto: nombresMetodo[t] || t }; }), "Debito");
+      var prov = campo(c, "¿Dónde? (opcional)", entrada("text", "", { placeholder: "Uber, Mercado Libre, Locatel…" }));
+      botonGuardar(c, "Guardar gasto", function (b) {
+        if (!desc.value.trim()) return aviso("Escribe en qué se gastó", true);
+        if (!numero(valor.value)) return aviso("Falta el valor", true);
+        enviar("gasto", { descripcion: desc.value.trim(), valor: numero(valor.value), fecha: fecha.value, categoria: cat.valor, metodo: metodo.valor, proveedor: prov.value.trim() }, b);
+      });
+    }
+
+    function formPago() {
+      var c = abrirHoja("Pago a un socio 👥", "va a 07_Nomina");
+      var persona = chips(c, "¿A quién?", D.profesionales.map(function (p) { return { valor: p, texto: primerNombre(p) }; }),
+        D.profesionales.indexOf(sesion.quien) >= 0 ? sesion.quien : D.profesionales[0]);
+      var valor = dinero(c, "Valor", 0);
+      var duo = el("div", "dos"); c.appendChild(duo);
+      var mes = campo(duo, "Mes", lista(MESES, D.mesActual));
+      var anio = campo(duo, "Año", entrada("number", D.anio, { inputmode: "numeric" }));
+      botonGuardar(c, "Guardar pago", function (b) {
+        if (!numero(valor.value)) return aviso("Falta el valor", true);
+        enviar("pago", { persona: persona.valor, valor: numero(valor.value), mes: mes.value, anio: +anio.value }, b);
+      });
+    }
+
+    function cobrar(x, boton) {
+      if (!confirm(x.cliente + " pagó " + plata(x.total) + ". ¿Marcar como al día?")) return;
+      enviar("cobrado", { fila: x.fila, id: x.id }, boton);
+    }
+
+    // ——— Avisos ———
+    var tiempoAviso;
+    function aviso(texto, mal) {
+      var t = $("toast"); t.textContent = texto; t.classList.toggle("mal", !!mal); t.classList.add("ver");
+      clearTimeout(tiempoAviso); tiempoAviso = setTimeout(function () { t.classList.remove("ver"); }, 3200);
+    }
+
+    // ——— Entrar y salir ———
+    var quienElegido = sesion.quien ? primerNombre(sesion.quien) : "";
+    document.querySelectorAll("#quienes button").forEach(function (b) {
+      if (b.getAttribute("data-quien") === quienElegido) b.classList.add("activo");
+      b.onclick = function () {
+        quienElegido = b.getAttribute("data-quien");
+        document.querySelectorAll("#quienes button").forEach(function (x) { x.classList.toggle("activo", x === b); });
+      };
+    });
+    $("entrar").onclick = function () {
+      var b = this;
+      if (!quienElegido) return ($("errorEntrada").textContent = "Elige quién eres");
+      if (!$("clave").value) return ($("errorEntrada").textContent = "Escribe la clave");
+      if (URL_FINANZAS.indexOf("https://") !== 0) return ($("errorEntrada").textContent = "La app aún no está conectada al programa de Google.");
+      sesion = { quien: quienElegido, clave: $("clave").value };
+      b.disabled = true; b.textContent = "Entrando…"; $("errorEntrada").textContent = "";
+      api("datos")
+        .then(function (r) { guardar("axis-fin-sesion", sesion); mostrarApp(); recibir(r); })
+        .catch(function (e) { $("errorEntrada").textContent = e.clave ? "Clave incorrecta" : "No pudimos conectar. Revisa el internet."; })
+        .finally(function () { b.disabled = false; b.textContent = "Entrar"; });
+    };
+    $("clave").addEventListener("keydown", function (e) { if (e.key === "Enter") $("entrar").click(); });
+
+    function mostrarApp() { $("entrada").classList.add("oculto"); $("app").classList.remove("oculto"); }
+    function salir() {
+      try { localStorage.removeItem("axis-fin-sesion"); localStorage.removeItem("axis-fin-datos"); } catch (e) {}
+      sesion = {}; D = null;
+      $("app").classList.add("oculto"); $("entrada").classList.remove("oculto");
+    }
+    $("salir").onclick = function () { if (confirm("¿Cerrar sesión en este celular?")) salir(); };
+
+    // Al abrir: si ya entró antes, muestra lo último guardado y actualiza.
+    if (sesion.clave) {
+      mostrarApp();
+      D = leer("axis-fin-datos");
+      pintar();
+      cargar(true);
+    } else {
+      $("entrada").classList.remove("oculto");
+    }
+    // Al volver a la app después de un rato, se actualiza sola.
+    document.addEventListener("visibilitychange", function () { if (!document.hidden && sesion.clave) cargar(true); });
+
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function () {});
+  </script>
+</body>
+</html>

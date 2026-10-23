@@ -58,6 +58,18 @@
     return String(t || "").trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ");
   }
 
+  // Resortes: dos ejercicios con la misma clave se hacen seguidos sin tocar los resortes
+  function claveResortes(ej) {
+    var r = normalizar(ej && ej.resortes).replace(/\s*[,·]\s*/g, " · ");
+    return r ? ej.maquina + "|" + r : "";
+  }
+  // 2 = mismos resortes · 1 = mismos resortes pero cambia la altura o la barra · 0 = hay que cambiarlos
+  function parecido(a, b) {
+    if (!a || !b) return 0;
+    if (a === b) return 2;
+    return a.split(" · ")[0] === b.split(" · ")[0] ? 1 : 0;
+  }
+
   function Armador(ejercicios, op, historial, azar) {
     this.op = op;
     this.azar = azar || Math.random;
@@ -73,6 +85,7 @@
       return true;
     });
     this.rec = recientes(historial, this.alumnas, op.hoy ? new Date(op.hoy) : new Date());
+    this.montajes = {}; // resortes que ya salieron en la clase: se prefieren para cambiarlos menos
   }
 
   Armador.prototype.estados = function (ej) {
@@ -113,10 +126,11 @@
         var ej = sorteo(caben, function (x) {
           // variar: menos probable repetir el mismo tipo de movimiento dentro de la misma parte
           var repetidos = elegidos.filter(function (e) { return e.movimiento === x.movimiento; }).length;
-          return self.peso(x) * Math.pow(0.5, repetidos);
+          return self.peso(x) * Math.pow(0.5, repetidos) * (self.montajes[claveResortes(x)] ? 2.5 : 1);
         }, self.azar);
         if (!ej) break;
         usados[ej.id] = true;
+        if (claveResortes(ej)) self.montajes[claveResortes(ej)] = true;
         elegidos.push(ej);
         suma += minutosDe(ej);
       }
@@ -171,11 +185,34 @@
     return p;
   };
 
-  function ordenar(lista, maquinas) {
-    return lista.slice().sort(function (a, b) {
-      return (maquinas.indexOf(a.maquina) - maquinas.indexOf(b.maquina)) ||
-        (POSICIONES.indexOf(a.posicion) - POSICIONES.indexOf(b.posicion));
+  // Ordena por máquina (en el orden del circuito) y, dentro de cada máquina, junta los ejercicios
+  // que usan los mismos resortes. "previa" = los resortes con los que viene la clase.
+  function ordenar(lista, maquinas, previa) {
+    var orden = maquinas.slice();
+    lista.forEach(function (e) { if (orden.indexOf(e.maquina) < 0) orden.push(e.maquina); });
+    var porPosicion = function (a, b) { return POSICIONES.indexOf(a.posicion) - POSICIONES.indexOf(b.posicion); };
+    var salida = [], ultima = previa || "";
+    orden.forEach(function (m) {
+      var grupos = {}, claves = [];
+      lista.filter(function (e) { return e.maquina === m; }).sort(porPosicion).forEach(function (e) {
+        var k = claveResortes(e);
+        if (!grupos[k]) { grupos[k] = []; claves.push(k); }
+        grupos[k].push(e);
+      });
+      while (claves.length) { // sigue con los resortes más parecidos a los que quedaron puestos
+        var mejor = 0;
+        claves.forEach(function (k, i) { if (parecido(ultima, k) > parecido(ultima, claves[mejor])) mejor = i; });
+        var k = claves.splice(mejor, 1)[0];
+        salida = salida.concat(grupos[k]);
+        if (k) ultima = k;
+      }
     });
+    return salida;
+  }
+
+  function ultimosResortes(lista, previa) {
+    for (var i = lista.length - 1; i >= 0; i--) if (claveResortes(lista[i])) return claveResortes(lista[i]);
+    return previa || "";
   }
 
   function armar(ejercicios, op, historial, azar) {
@@ -188,23 +225,36 @@
     if (!cie.length) cie = A.llenar("Cierre", maquinas, REPARTO.Cierre, usados);
     var suma = function (l) { return l.reduce(function (t, e) { return t + minutosDe(e); }, 0); };
     var principal = [], resto = total - suma(cal) - suma(cie);
+    cal = ordenar(cal, maquinas);
     // circuito: la parte principal se reparte entre todas las máquinas, en bloques
     maquinas.forEach(function (m, i) {
       var meta = Math.round(resto * (i + 1) / maquinas.length) - suma(principal);
-      principal = principal.concat(ordenar(A.llenar("Principal", [m], meta, usados), maquinas));
+      principal = principal.concat(A.llenar("Principal", [m], meta, usados));
     });
     if (suma(principal) < resto - 1) principal = principal.concat(A.llenar("Principal", maquinas, resto - suma(principal), usados));
-    var lista = ordenar(cal, maquinas).concat(principal, ordenar(cie, maquinas));
-    var pasos = lista.map(function (ej) { return A.paso(ej, usados); });
+    // el calentamiento termina con unos resortes que también use la parte principal, para seguir sin cambiarlos
+    var enPrincipal = {};
+    principal.forEach(function (e) { if (claveResortes(e)) enPrincipal[claveResortes(e)] = true; });
+    var siguen = cal.filter(function (e) { return enPrincipal[claveResortes(e)]; });
+    var final = siguen.length ? claveResortes(siguen[siguen.length - 1]) : "";
+    if (final) cal = cal.filter(function (e) { return claveResortes(e) !== final; }).concat(cal.filter(function (e) { return claveResortes(e) === final; }));
+    principal = ordenar(principal, maquinas, ultimosResortes(cal));
+    cie = ordenar(cie, maquinas, ultimosResortes(principal, ultimosResortes(cal)));
+    var pasos = [];
+    [[cal, "Calentamiento"], [principal, "Principal"], [cie, "Cierre"]].forEach(function (parte) {
+      // la parte en la que se eligió (un ejercicio de la parte principal puede completar el cierre)
+      parte[0].forEach(function (ej) { var p = A.paso(ej, usados); p.fase = parte[1]; pasos.push(p); });
+    });
     return ajustar({ opciones: op, pasos: pasos }, total);
   }
 
   // Si con los ejercicios que hay no se llega a los 50 minutos (máquinas con pocos ejercicios del nivel),
   // se les da un poco más de tiempo (más repeticiones), hasta 1.6 veces lo normal.
+  // En una clase armada a mano no se estiran los tiempos: cada ejercicio queda con sus minutos.
   function ajustar(clase, total) {
     var base = 0;
     clase.pasos.forEach(function (p) { p.base = p.base || p.minutos; p.minutos = p.base; base += p.base; });
-    if (base && base < total - 1) {
+    if (base && base < total - 1 && !clase.opciones.manual) {
       var factor = Math.min(1.6, total / base), suma = 0;
       clase.pasos.forEach(function (p) { p.minutos = Math.round(p.base * factor); suma += p.minutos; });
       var meta = Math.min(total, Math.floor(base * 1.6));
@@ -222,11 +272,7 @@
   // Cambia un solo ejercicio de la clase por otro de la misma fase y máquina
   function cambiar(ejercicios, clase, indice, historial, azar) {
     var op = clase.opciones, A = new Armador(ejercicios, op, historial, azar);
-    var usados = {};
-    clase.pasos.forEach(function (p) {
-      usados[p.id] = true;
-      (p.alumnas || []).forEach(function (a) { if (a.reemplazo) usados[a.reemplazo] = true; });
-    });
+    var usados = usadosEn(clase);
     var viejo = clase.pasos[indice];
     var actual = ejercicios.filter(function (e) { return e.id === viejo.id; })[0] || { minutos: viejo.minutos };
     var buscar = function (misma) {
@@ -237,15 +283,78 @@
     var lista = buscar(true);
     if (!lista.length) lista = buscar(false);
     var dif = function (e) { return Math.abs(minutosDe(e) - minutosDe(actual)); };
-    var nuevo = sorteo(lista, function (e) { return A.peso(e) / (1 + dif(e)); }, A.azar);
+    var nuevo = sorteo(lista, function (e) {
+      return A.peso(e) / (1 + dif(e)) * (1 + 2 * parecido(claveResortes(actual), claveResortes(e))); // mejor si no hay que tocar los resortes
+    }, A.azar);
     if (!nuevo) return null;
-    var pasos = clase.pasos.map(function (p) { return Object.assign({}, p); });
+    var pasos = copiar(clase.pasos);
     usados[nuevo.id] = true;
     pasos[indice] = A.paso(nuevo, usados);
     return ajustar({ opciones: op, pasos: pasos }, op.minutos || MINUTOS);
   }
 
-  var api = { ZONAS: ZONAS, MAQUINAS: MAQUINAS, FASES: FASES, NIVELES: NIVELES, POSICIONES: POSICIONES, estadoPara: estadoPara, armar: armar, cambiar: cambiar, normalizar: normalizar };
+  // ——— Cambios a mano sobre una clase ya armada ———
+  function usadosEn(clase) {
+    var usados = {};
+    clase.pasos.forEach(function (p) {
+      usados[p.id] = true;
+      (p.alumnas || []).forEach(function (a) { if (a.reemplazo) usados[a.reemplazo] = true; });
+    });
+    return usados;
+  }
+  function copiar(pasos) { return pasos.map(function (p) { return Object.assign({}, p); }); }
+  function buscarEj(ejercicios, id) { return ejercicios.filter(function (e) { return e.id === id; })[0]; }
+
+  // Dónde va un ejercicio nuevo: en su parte de la clase, después de los que usan los mismos resortes;
+  // si no hay, al final de su máquina (respetando el orden del circuito).
+  function lugar(ejercicios, pasos, p, maquinas) {
+    var fase = FASES.indexOf(p.fase), maq = maquinas.indexOf(p.maquina);
+    var k = claveResortes(buscarEj(ejercicios, p.id)), mismos = -1, final = 0;
+    pasos.forEach(function (x, i) {
+      var f = FASES.indexOf(x.fase);
+      if (f === fase && k && claveResortes(buscarEj(ejercicios, x.id)) === k) mismos = i + 1;
+      if (f < fase || (f === fase && maquinas.indexOf(x.maquina) <= maq)) final = i + 1;
+    });
+    return mismos >= 0 ? mismos : final;
+  }
+
+  function agregar(ejercicios, clase, id, fase, historial) {
+    var op = clase.opciones, A = new Armador(ejercicios, op, historial);
+    var ej = buscarEj(ejercicios, id);
+    if (!ej) return null;
+    var usados = usadosEn(clase);
+    usados[id] = true;
+    var p = A.paso(ej, usados);
+    p.fase = fase || ej.fase;
+    var pasos = copiar(clase.pasos);
+    pasos.splice(lugar(ejercicios, pasos, p, op.maquinas || []), 0, p);
+    return ajustar({ opciones: op, pasos: pasos }, op.minutos || MINUTOS);
+  }
+
+  function reemplazar(ejercicios, clase, indice, id, historial) {
+    var op = clase.opciones, A = new Armador(ejercicios, op, historial);
+    var ej = buscarEj(ejercicios, id);
+    if (!ej) return null;
+    var usados = usadosEn(clase);
+    usados[id] = true;
+    var pasos = copiar(clase.pasos);
+    var p = A.paso(ej, usados);
+    p.fase = pasos[indice].fase;
+    pasos[indice] = p;
+    return ajustar({ opciones: op, pasos: pasos }, op.minutos || MINUTOS);
+  }
+
+  function quitar(clase, indice) {
+    var pasos = copiar(clase.pasos);
+    pasos.splice(indice, 1);
+    return ajustar({ opciones: clase.opciones, pasos: pasos }, clase.opciones.minutos || MINUTOS);
+  }
+
+  var api = {
+    ZONAS: ZONAS, MAQUINAS: MAQUINAS, FASES: FASES, NIVELES: NIVELES, POSICIONES: POSICIONES, MINUTOS: MINUTOS,
+    estadoPara: estadoPara, armar: armar, cambiar: cambiar, agregar: agregar, reemplazar: reemplazar, quitar: quitar,
+    claveResortes: claveResortes, normalizar: normalizar,
+  };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else raiz.Rutina = api;
 })(this);

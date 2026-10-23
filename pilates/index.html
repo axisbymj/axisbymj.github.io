@@ -109,7 +109,17 @@
     .paso .info { flex: 1; min-width: 0; }
     .paso .info b { display: block; font-size: .98rem; line-height: 1.25; }
     .paso .info small { color: var(--suave); font-size: .74rem; font-weight: 600; }
-    .paso .cambiar { width: 38px; height: 38px; border-radius: 50%; background: var(--fondo); color: var(--real); font-size: 1.05rem; flex: none; }
+    .paso .acciones { display: flex; gap: 6px; flex: none; }
+    .paso .cambiar, .paso .quitar { width: 38px; height: 38px; border-radius: 50%; background: var(--fondo); color: var(--real); font-size: 1.05rem; flex: none; }
+    .paso .quitar { color: var(--rojo); }
+    .paso .dato.mismo { color: var(--suave); }
+    .resortes-cambio { display: flex; align-items: center; gap: 8px; margin: 2px 6px 8px; font-size: .76rem; font-weight: 700; color: var(--ambar); }
+    .resortes-cambio::before, .resortes-cambio::after { content: ""; flex: 1; height: 1px; background: var(--ambar-f); }
+    .agregar { width: 100%; border: 1.5px dashed var(--glaciar); border-radius: 18px; padding: 12px; font-weight: 700; font-size: .85rem; color: var(--real); background: rgba(142, 202, 230, .12); margin-bottom: 4px; }
+    .elegir .item { border-top: 1px solid var(--linea); }
+    .elegir .item:first-child { border-top: 0; }
+    .elegir .mas { width: 34px; height: 34px; border-radius: 50%; background: var(--medianoche); color: #fff; display: grid; place-items: center; font-weight: 800; flex: none; }
+    .elegir .item small.res { display: block; color: var(--texto2); margin-top: 2px; }
     .paso .dato { font-size: .8rem; color: var(--texto2); margin-top: 8px; line-height: 1.4; }
     .paso .dato b { color: var(--medianoche); }
     .paso details { margin-top: 8px; font-size: .8rem; color: var(--texto2); }
@@ -247,7 +257,8 @@
             <label class="campo"><span>Fecha de la clase</span><input type="date" id="fecha" /></label>
           </div>
 
-          <button class="boton principal ancho" id="armar" style="margin-bottom:16px">✨ Armar rutina</button>
+          <button class="boton principal ancho" id="armar" style="margin-bottom:10px">✨ Armar rutina</button>
+          <button class="boton ancho" id="armarYo" style="margin-bottom:16px;background:var(--blanco)">✋ La armo yo (escojo los ejercicios)</button>
         </div>
 
         <div id="resultado" class="oculto">
@@ -505,28 +516,40 @@
     function historial() { return D.clases; }
     function nombreAlumna(i, op) { var n = ((op || C.opciones).alumnas[i] || {}).nombre; return n && n.trim() ? n.trim() : "Estudiante " + (i + 1); }
 
-    $("armar").addEventListener("click", function () {
-      if (!D.ejercicios.length) return aviso("Todavía no se han cargado los ejercicios", true);
+    function opcionesForm() {
       guardar("axis-pil-form", { maquinas: F.maquinas, circuito: F.circuito, equipos: F.equipos, nivel: F.nivel });
-      var op = {
+      return {
         maquinas: F.maquinas.slice(), circuito: F.circuito, equipos: F.equipos ? F.equipos.slice() : null, nivel: F.nivel,
         alumnas: F.alumnas.map(function (a) { return { nombre: a.nombre.trim(), zonas: a.zonas.slice() }; }), fecha: F.fecha, hoy: F.fecha,
       };
-      C = R.armar(D.ejercicios, op, historial());
+    }
+    $("armar").addEventListener("click", function () {
+      if (!D.ejercicios.length) return aviso("Todavía no se han cargado los ejercicios", true);
+      C = R.armar(D.ejercicios, opcionesForm(), historial());
       if (!C.pasos.length) { C = null; return aviso("No hay ejercicios para esa combinación", true); }
       guardar("axis-pil-borrador", C);
       pintarClase();
     });
+    // Clase hecha a mano: arranca vacía y ella escoge cada ejercicio
+    $("armarYo").addEventListener("click", function () {
+      if (!D.ejercicios.length) return aviso("Todavía no se han cargado los ejercicios", true);
+      var op = opcionesForm(); op.manual = true;
+      C = { opciones: op, pasos: [], minutos: 0 };
+      guardar("axis-pil-borrador", C);
+      pintarClase(); window.scrollTo(0, 0);
+      elegir({ fase: "Calentamiento" });
+    });
 
     function porId(id) { return D.ejercicios.filter(function (e) { return e.id === id; })[0]; }
 
-    function htmlPaso(p, i, op, nombres, conBoton) {
+    function htmlPaso(p, i, op, nombres, conBoton, mismosResortes) {
       var ej = porId(p.id) || { nombre: (nombres || {})[p.id] || p.id, maquina: p.maquina };
       var h = '<div class="paso"><div class="arriba"><span class="min">' + p.minutos + "'</span>" +
         '<div class="info"><b>' + esc(ej.nombre) + "</b><small>" + esc(ej.maquina + (ej.equipo ? " · " + ej.equipo : "") + (ej.nivel ? " · " + ej.nivel : "")) + "</small></div>" +
-        (conBoton ? '<button class="cambiar" data-cambiar="' + i + '" aria-label="Cambiar este ejercicio">↻</button>' : "") + "</div>";
+        (conBoton ? '<span class="acciones"><button class="cambiar" data-cambiar="' + i + '" aria-label="Cambiar este ejercicio">↻</button>' +
+          '<button class="quitar" data-quitar="' + i + '" aria-label="Quitar este ejercicio">✕</button></span>' : "") + "</div>";
       if (ej.incluye) h += '<p class="dato"><b>Incluye:</b> ' + esc(ej.incluye) + "</p>";
-      if (ej.resortes) h += '<p class="dato">🔩 ' + esc(ej.resortes) + "</p>";
+      if (ej.resortes) h += mismosResortes ? '<p class="dato mismo">🔩 Mismos resortes</p>' : '<p class="dato">🔩 ' + esc(ej.resortes) + "</p>";
       if (ej.notas || ej.objetivo) h += "<details><summary>Indicaciones</summary>" + (ej.objetivo ? "<p><b>Objetivo:</b> " + esc(ej.objetivo) + "</p>" : "") + (ej.notas ? "<p>" + esc(ej.notas) + "</p>" : "") + "</details>";
       (p.alumnas || []).forEach(function (a, k) {
         var quien = esc(nombreAlumna(k, op)), zonas = esc((a.zonas || []).join(", ").toLowerCase());
@@ -541,15 +564,35 @@
       return h + "</div>";
     }
 
+    // Cuántas veces hay que cambiar resortes en la misma máquina (cambiar de máquina en el circuito no cuenta)
+    function cambiosResortes(pasos) {
+      var ultima = "", n = 0;
+      pasos.forEach(function (p) {
+        var k = R.claveResortes(porId(p.id));
+        if (!k) return;
+        if (ultima && k !== ultima && ultima.split("|")[0] === k.split("|")[0]) n++;
+        ultima = k;
+      });
+      return n;
+    }
+
+    // Con botones: se muestran las tres partes (aunque estén vacías) con su botón para agregar
     function htmlPasos(clase, nombres, conBoton) {
-      var h = "", faseActual = "";
-      clase.pasos.forEach(function (p, i) {
-        if (p.fase !== faseActual) {
-          faseActual = p.fase;
-          var min = clase.pasos.filter(function (x) { return x.fase === p.fase; }).reduce(function (t, x) { return t + x.minutos; }, 0);
-          h += '<div class="fase"><b>' + esc(p.fase) + "</b><i></i><span>" + min + " min</span></div>";
-        }
-        h += htmlPaso(p, i, clase.opciones, nombres, conBoton);
+      var h = "", ultima = "";
+      R.FASES.forEach(function (fase) {
+        var deFase = [];
+        clase.pasos.forEach(function (p, i) { if (p.fase === fase) deFase.push(i); });
+        if (!deFase.length && !conBoton) return;
+        var min = deFase.reduce(function (t, i) { return t + clase.pasos[i].minutos; }, 0);
+        h += '<div class="fase"><b>' + esc(fase) + "</b><i></i><span>" + min + " min</span></div>";
+        deFase.forEach(function (i) {
+          var p = clase.pasos[i], k = R.claveResortes(porId(p.id));
+          var mismos = !!k && k === ultima;
+          if (k && ultima && !mismos && ultima.split("|")[0] === k.split("|")[0]) h += '<div class="resortes-cambio">🔩 cambiar resortes</div>';
+          if (k) ultima = k;
+          h += htmlPaso(p, i, clase.opciones, nombres, conBoton, mismos);
+        });
+        if (conBoton) h += '<button class="agregar" data-agregar="' + esc(fase) + '">＋ Agregar ejercicio al ' + esc(fase.toLowerCase()) + "</button>";
       });
       return h;
     }
@@ -565,20 +608,114 @@
       $("resultado").classList.remove("oculto");
       var op = C.opciones;
       $("tituloClase").textContent = textoAlumnas(op);
-      $("detalleClase").textContent = bonita(op.fecha) + " · " + (op.circuito ? "Circuito: " : "") + op.maquinas.join(" → ") + " · " + op.nivel;
+      var cambios = cambiosResortes(C.pasos), falta = R.MINUTOS - C.minutos;
+      $("detalleClase").textContent = bonita(op.fecha) + " · " + (op.circuito ? "Circuito: " : "") + op.maquinas.join(" → ") + " · " + op.nivel +
+        (op.manual ? " · armada a mano" : "") + " · 🔩 " + (cambios === 1 ? "1 cambio" : cambios + " cambios") + " de resortes" +
+        (op.manual && falta > 0 ? " · faltan " + falta + " min para " + R.MINUTOS : "");
       $("minutosClase").textContent = C.minutos;
       $("pasos").innerHTML = htmlPasos(C, null, true);
+      $("sortear").textContent = op.manual ? "✨ Que la app la arme" : "🎲 Sortear otra";
     }
 
+    function cambiarClase(nueva) { C = nueva; guardar("axis-pil-borrador", C); pintarClase(); }
+
     $("pasos").addEventListener("click", function (e) {
-      var b = e.target.closest("[data-cambiar]"); if (!b) return;
-      var nueva = R.cambiar(D.ejercicios, C, Number(b.dataset.cambiar), historial());
-      if (!nueva) return aviso("No hay otro ejercicio para cambiar este", true);
-      C = nueva; guardar("axis-pil-borrador", C); pintarClase();
+      var b = e.target.closest("[data-cambiar],[data-quitar],[data-agregar]"); if (!b) return;
+      if (b.dataset.cambiar) elegir({ indice: Number(b.dataset.cambiar) });
+      if (b.dataset.agregar) elegir({ fase: b.dataset.agregar });
+      if (b.dataset.quitar) {
+        var i = Number(b.dataset.quitar), nombre = (porId(C.pasos[i].id) || {}).nombre;
+        cambiarClase(R.quitar(C, i));
+        aviso("Quitado: " + nombre);
+      }
     });
     $("sortear").addEventListener("click", function () {
+      if (C.opciones.manual) {
+        if (C.pasos.length && !confirm("¿Que la app arme la clase? Se pierden los ejercicios que escogiste.")) return;
+        C.opciones = Object.assign({}, C.opciones, { manual: false });
+      }
       C = R.armar(D.ejercicios, C.opciones, historial());
       guardar("axis-pil-borrador", C); pintarClase(); window.scrollTo(0, 0);
+    });
+
+    // ——— Escoger un ejercicio a mano (para agregarlo o para cambiar uno) ———
+    // modo: { fase } = agregar a esa parte · { indice } = cambiar ese ejercicio
+    var E = {};
+    function elegir(modo) {
+      var viejo = modo.indice !== undefined ? C.pasos[modo.indice] : null;
+      E = { modo: modo, fase: viejo ? viejo.fase : modo.fase, maq: viejo ? viejo.maquina : "Todas", q: "", viejo: viejo ? porId(viejo.id) : null };
+      var op = C.opciones;
+      var h = "<h3>" + (viejo ? "Cambiar ejercicio" : "Agregar al " + esc(E.fase.toLowerCase())) + "</h3>" +
+        '<p class="sub">' + (viejo ? "En lugar de <b>" + esc((E.viejo || {}).nombre || viejo.id) + "</b>. " : "") +
+        "Arriba salen los que usan los resortes que ya están puestos.</p>" +
+        (viejo ? '<button class="boton ancho" id="alAzar" style="margin-top:14px">🎲 Que la app escoja uno</button>' : "") +
+        '<input class="buscar" id="buscarElegir" placeholder="Buscar ejercicio…" style="margin-top:14px" />' +
+        (op.maquinas.length > 1 ? '<div class="chips pequenos" id="elegirMaq"></div>' : "") +
+        '<div class="chips pequenos" id="elegirFase"></div>' +
+        '<div class="elegir" id="listaElegir" style="margin-top:8px"></div>';
+      abrirHoja(h);
+      if (viejo) $("alAzar").onclick = function () {
+        var nueva = R.cambiar(D.ejercicios, C, modo.indice, historial());
+        if (!nueva) return aviso("No hay otro ejercicio para cambiar este", true);
+        cambiarClase(nueva); cerrarHoja();
+      };
+      $("buscarElegir").oninput = function () { E.q = this.value; pintarElegir(); };
+      pintarElegir();
+    }
+
+    function pintarElegir() {
+      var op = C.opciones;
+      if ($("elegirMaq")) $("elegirMaq").innerHTML = ["Todas"].concat(op.maquinas).map(function (m) {
+        return '<button data-m="' + esc(m) + '" class="' + (m === E.maq ? "activo" : "") + '">' + esc(m) + "</button>";
+      }).join("");
+      $("elegirFase").innerHTML = R.FASES.concat(["Todas"]).map(function (f) {
+        return '<button data-f="' + esc(f) + '" class="' + (f === E.fase ? "activo" : "") + '">' + esc(f === "Todas" ? "Todas las partes" : f) + "</button>";
+      }).join("");
+      // resortes que ya están puestos: los del ejercicio que se cambia, o los de esa parte de la clase
+      var puestos = {};
+      if (E.viejo) puestos[R.claveResortes(E.viejo)] = true;
+      else C.pasos.forEach(function (p) { if (p.fase === E.modo.fase) puestos[R.claveResortes(porId(p.id))] = true; });
+      var enClase = {};
+      C.pasos.forEach(function (p) { enClase[p.id] = true; });
+      var q = R.normalizar(E.q);
+      var lista = D.ejercicios.filter(function (e) {
+        return String(e.activo).toLowerCase() !== "no" && !enClase[e.id] && op.maquinas.indexOf(e.maquina) >= 0 &&
+          (E.maq === "Todas" || e.maquina === E.maq) && (E.fase === "Todas" || e.fase === E.fase) &&
+          (!q || R.normalizar(e.nombre + " " + (e.ingles || "") + " " + (e.equipo || "") + " " + (e.resortes || "")).indexOf(q) >= 0);
+      });
+      var clave = function (e) { var k = R.claveResortes(e); return (k && puestos[k] ? "0" : "1") + k; };
+      lista.sort(function (a, b) {
+        return (op.maquinas.indexOf(a.maquina) - op.maquinas.indexOf(b.maquina)) || clave(a).localeCompare(clave(b)) ||
+          ((R.NIVELES[a.nivel] || 0) - (R.NIVELES[b.nivel] || 0)) || a.nombre.localeCompare(b.nombre, "es");
+      });
+      $("listaElegir").innerHTML = lista.length ? lista.slice(0, 120).map(function (e) {
+        var k = R.claveResortes(e), marcas = "";
+        op.alumnas.forEach(function (al, i) {
+          var s = R.estadoPara(e, al.zonas).estado;
+          if (s === "A") marcas += '<span class="pildora ambar">⚠ ' + esc(nombreAlumna(i, op)) + "</span>";
+          if (s === "E") marcas += '<span class="pildora rojo">✕ ' + esc(nombreAlumna(i, op)) + "</span>";
+        });
+        return '<button class="item" data-elegir="' + esc(e.id) + '"><span class="info"><b>' + esc(e.nombre) + "</b><small>" +
+          esc([op.maquinas.length > 1 ? e.maquina : "", e.equipo, e.nivel, E.fase === "Todas" ? e.fase : "", e.minutos + " min"].filter(Boolean).join(" · ")) + marcas + "</small>" +
+          (e.resortes ? '<small class="res">🔩 ' + esc(e.resortes) + (k && puestos[k] ? ' <span class="pildora gris">ya puestos</span>' : "") + "</small>" : "") +
+          '</span><span class="mas">' + (E.viejo ? "↻" : "＋") + "</span></button>";
+      }).join("") : '<p class="vacio" style="padding:12px 0">No hay ejercicios con ese filtro.</p>';
+    }
+
+    $("contenidoHoja").addEventListener("click", function (e) {
+      if (!$("listaElegir")) return;
+      var m = e.target.closest("#elegirMaq button"), f = e.target.closest("#elegirFase button"), b = e.target.closest("[data-elegir]");
+      if (m) { E.maq = m.dataset.m; pintarElegir(); }
+      if (f) { E.fase = f.dataset.f; pintarElegir(); }
+      if (!b) return;
+      var ej = porId(b.dataset.elegir);
+      if (E.viejo) {
+        cambiarClase(R.reemplazar(D.ejercicios, C, E.modo.indice, ej.id, historial()));
+        cerrarHoja(); aviso("Cambiado por: " + ej.nombre);
+      } else { // queda abierta para seguir agregando
+        cambiarClase(R.agregar(D.ejercicios, C, ej.id, E.modo.fase, historial()));
+        pintarElegir(); aviso("Agregado: " + ej.nombre + " · " + C.minutos + " min");
+      }
     });
     $("editarOpciones").addEventListener("click", function () {
       var op = C.opciones;
@@ -590,6 +727,7 @@
     });
 
     $("guardarClase").addEventListener("click", function () {
+      if (!C.pasos.length) return aviso("Agrega al menos un ejercicio", true);
       var op = C.opciones, ids = [], nombres = {};
       C.pasos.forEach(function (p) {
         ids.push(p.id); nombres[p.id] = (porId(p.id) || {}).nombre;

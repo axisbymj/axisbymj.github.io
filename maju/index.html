@@ -144,11 +144,11 @@
 
     // Solo para el modo de prueba (las de verdad vienen de la hoja de Google)
     var CATEGORIAS_PRUEBA = [
-      ["Arriendo", "Necesidades", 0, 1], ["Mercado", "Necesidades", 900000, 1], ["Cuidado personal", "Necesidades", 0, 0],
-      ["Medicamentos", "Necesidades", 0, 0], ["Luz", "Necesidades", 132560, 1], ["Agua", "Necesidades", 119020, 1],
-      ["Gas", "Necesidades", 0, 1], ["Celular", "Necesidades", 0, 0], ["WiFi", "Necesidades", 130000, 1],
-      ["Transporte", "Necesidades", 182000, 0], ["Salud", "Necesidades", 441000, 0], ["Mascotas", "Necesidades", 381000, 1],
-      ["Lavandería", "Necesidades", 0, 1], ["Gimnasio", "Gustos", 147000, 0], ["Salidas", "Gustos", 0, 0],
+      ["Arriendo", "Necesidades", 0, 1], ["Mercado", "Necesidades", 0, 1], ["Cuidado personal", "Necesidades", 0, 0],
+      ["Medicamentos", "Necesidades", 0, 0], ["Luz", "Necesidades", 0, 1], ["Agua", "Necesidades", 0, 1],
+      ["Gas", "Necesidades", 0, 1], ["Celular", "Necesidades", 0, 0], ["WiFi", "Necesidades", 0, 1],
+      ["Transporte", "Necesidades", 0, 0], ["Salud", "Necesidades", 0, 0], ["Mascotas", "Necesidades", 0, 1],
+      ["Lavandería", "Necesidades", 0, 1], ["Gimnasio", "Gustos", 0, 0], ["Salidas", "Gustos", 0, 0],
       ["Entretenimiento", "Gustos", 0, 0], ["Comidas fuera", "Gustos", 0, 0], ["Viajes", "Gustos", 0, 0], ["Uñas", "Gustos", 0, 0],
       ["Cabello", "Gustos", 0, 0], ["Ropa y zapatos", "Gustos", 0, 0], ["Regalos", "Gustos", 0, 0], ["Compras", "Gustos", 0, 0],
       ["Suscripciones", "Gustos", 0, 0], ["Tecnología", "Gustos", 0, 0], ["Cursos", "Gustos", 0, 0],
@@ -158,8 +158,8 @@
       ["Sueldo", "Ingresos", 0, 0], ["Terapias", "Ingresos", 0, 0], ["Clases", "Ingresos", 0, 0], ["Otro ingreso", "Ingresos", 0, 0]
     ].map(function (c) { return { nombre: c[0], grupo: c[1], presupuesto: c[2], casa: !!c[3], activa: true }; });
     var BOLSILLOS_PRUEBA = [
-      ["Fondo de emergencias", 1000000, 120000], ["Vivienda", 50000000, 120000], ["Viajes", 0, 60000], ["Regalos", 0, 60000],
-      ["Celebraciones", 7000000, 120000], ["iPhone 17 Pro Max", 4210000, 0], ["Moto", 1000000, 120000]
+      ["Fondo de emergencias", 0, 0], ["Vivienda", 0, 0], ["Viajes", 0, 0], ["Regalos", 0, 0],
+      ["Celebraciones", 0, 0], ["iPhone 17 Pro Max", 0, 0], ["Moto", 0, 0]
     ].map(function (b) { return { nombre: b[0], meta: b[1], aporte: b[2], activo: true }; });
 
     // ——— Utilidades ———
@@ -190,6 +190,7 @@
     var S = { pantalla: YO && (PRUEBA || CLAVE) ? "inicio" : "entrar", anterior: "inicio", mes: mesActual(), grupo: "", borrar: "", cargando: false, error: "" };
     var A = null;  // lo que se está anotando
     var W = null;  // pasos de "empezar de cero"
+    var Z = null;  // cuenta o bolsillo que se está corrigiendo
 
     // ——— Hablar con la hoja de Google ———
     function llamar(accion, cuerpo) {
@@ -255,13 +256,17 @@
         if (m.tipo === "Saldo inicial") { if (m.cuenta) suma(m.persona, m.cuenta, v); else bolsa(m.persona, m.categoria, v); }
         else if (m.tipo === "Ingreso") suma(m.persona, m.cuenta, v);
         else if (m.tipo === "Gasto") suma(m.persona, m.cuenta, -v);
-        else if (m.tipo === "Ahorro") { suma(m.persona, m.cuenta, -v); bolsa(m.persona, m.categoria, v); }
-        else if (m.tipo === "Retiro ahorro") { bolsa(m.persona, m.categoria, -v); suma(m.persona, m.cuenta, v); }
+        // Los bolsillos son plata APARTADA dentro de las cuentas: no sale de la cuenta ni se suma aparte
+        else if (m.tipo === "Ahorro") bolsa(m.persona, m.categoria, v);
+        else if (m.tipo === "Retiro ahorro") bolsa(m.persona, m.categoria, -v);
         else if (m.tipo === "Traslado") { suma(m.persona, m.cuenta, -v); suma(m.haciaPersona, m.haciaCuenta, v); }
       });
-      var disp = {};
-      PERSONAS.forEach(function (p) { disp[p] = CUENTAS.reduce(function (a, c) { return a + saldo[p][c]; }, 0); });
-      return { saldo: saldo, disp: disp, guardado: guardado, bols: bols };
+      var tiene = {}, disp = {};
+      PERSONAS.forEach(function (p) {
+        tiene[p] = CUENTAS.reduce(function (a, c) { return a + saldo[p][c]; }, 0);
+        disp[p] = tiene[p] - guardado[p];  // libre = lo que hay en las cuentas menos lo apartado
+      });
+      return { saldo: saldo, tiene: tiene, disp: disp, guardado: guardado, bols: bols };
     }
 
     function delMes(mes) {
@@ -343,8 +348,9 @@
       return (m.nota ? m.categoria + " · " : "") + m.persona + " · " + m.cuenta + (m.casa ? " · de la casa" : "");
     }
     function signo(m) {
-      if (m.tipo === "Gasto" || m.tipo === "Ahorro") return -1;
-      if (m.tipo === "Ingreso" || m.tipo === "Retiro ahorro" || m.tipo === "Saldo inicial") return 1;
+      if (m.tipo === "Gasto") return -1;
+      if (m.tipo === "Saldo inicial") return m.valor < 0 ? -1 : 1;
+      if (m.tipo === "Ingreso" || m.tipo === "Retiro ahorro") return 1;
       return 0;
     }
     function filaMov(m, conBorrar) {
@@ -393,7 +399,7 @@
           }).join("") + '</div>';
       } else {
         h += '<h1 class="mt24" style="font-size: 28px">Lo guardado</h1>' +
-          '<p class="gris" style="font-size: 14px; line-height: 1.6; margin: 8px 0 0">Cuánto tiene cada uno hoy en cada bolsillo de ahorro.</p>' +
+          '<p class="gris" style="font-size: 14px; line-height: 1.6; margin: 8px 0 0">De la plata que ya anotaron en las cuentas, cuánto tiene apartado cada uno para cada bolsillo. No se suma otra vez: es una parte de esa misma plata.</p>' +
           '<div class="bols2" style="border: 0; padding-bottom: 0"><span></span><span class="etq-s" style="text-align: right; letter-spacing: 1px">Juliana</span><span class="etq-s" style="text-align: right; letter-spacing: 1px">Manuel</span></div>' +
           bolsillos().map(function (b, i) {
             return '<div class="bols2"><span style="font-size: 14px">' + esc(b.nombre) + '</span>' +
@@ -419,26 +425,27 @@
 
     function vInicio() {
       var b = balance(), r = delMes(mesActual());
-      var disp = b.disp.Juliana + b.disp.Manuel, guard = b.guardado.Juliana + b.guardado.Manuel;
+      var tiene = b.tiene.Juliana + b.tiene.Manuel, disp = b.disp.Juliana + b.disp.Manuel, guard = b.guardado.Juliana + b.guardado.Manuel;
       var meta = r.totalIngresos || GRUPOS.reduce(function (a, g) { return g.n === "Ahorro" ? a : a + metaGrupo(g, r); }, 0);
       var h = '<div class="fila" style="align-items: center"><div class="sello">家計</div>' +
         '<div style="display: flex; align-items: center; gap: 14px"><span class="etq" style="font-size: 13px; letter-spacing: 2px">' + nombreMes(mesActual()) + ' · ' + mesActual().slice(0, 4) + '</span>' +
         '<button class="enlace" style="text-decoration: none; font-size: 18px; letter-spacing: 2px; padding: 4px 0 10px" data-a="ir" data-v="ajustes" aria-label="Ajustes">···</button></div></div>';
       if (PEND.length || S.error) h += '<div class="shu" style="font-size: 12px; margin-top: 8px; text-align: right">' + (PEND.length ? PEND.length + " sin enviar" : "") + (S.error ? (PEND.length ? " · " : "") + S.error : "") + '</div>';
       h += '<div class="etq" style="margin-top: 36px">Nuestro dinero</div>' +
-        '<div class="grande">' + plata(disp + guard) + '</div>' +
-        '<div class="gris" style="font-size: 13px; margin-top: 6px">disponible ' + plata(disp) + ' · guardado ' + plata(guard) + '</div>' +
+        '<div class="grande">' + plata(tiene) + '</div>' +
+        '<div class="gris" style="font-size: 13px; margin-top: 6px">libre ' + plata(disp) + ' · apartado ' + plata(guard) + '</div>' +
         '<div class="dos">' + PERSONAS.map(function (p) {
           return '<div><div class="nombre">' + p + '</div>' +
-            '<div class="fila"><span class="gris">disponible</span><span>' + plata(b.disp[p]) + '</span></div>' +
-            '<div class="fila"><span class="gris">guardado</span><span>' + plata(b.guardado[p]) + '</span></div></div>';
+            '<div class="mincho" style="font-size: 19px">' + plata(b.tiene[p]) + '</div>' +
+            '<div class="fila"><span class="gris">libre</span><span>' + plata(b.disp[p]) + '</span></div>' +
+            '<div class="fila"><span class="gris">apartado</span><span>' + plata(b.guardado[p]) + '</span></div></div>';
         }).join("") + '</div>' +
         '<div class="etq mt24">Cuentas</div><div class="lista" style="margin-top: 4px">' +
         CUENTAS.map(function (c) {
           var j = b.saldo.Juliana[c], m = b.saldo.Manuel[c];
-          return '<div class="item"><div><div class="t">' + c + '</div><div class="s">' +
-            (j || m ? "Juliana " + plata(j) + " · Manuel " + plata(m) : "sin plata por ahora") + '</div></div><div class="v">' + plata(j + m) + '</div></div>';
-        }).join("") + '</div>' +
+          return '<button class="item" style="width: 100%; background: none; border: 0; border-bottom: 1px solid var(--linea2); text-align: left" data-a="ajustar" data-v="' + c + '"><div><div class="t">' + c + '</div><div class="s">' +
+            (j || m ? "Juliana " + plata(j) + " · Manuel " + plata(m) : "sin plata por ahora") + '</div></div><div class="v">' + plata(j + m) + '</div></button>';
+        }).join("") + '</div><div class="gris" style="font-size: 11px; margin-top: 6px">Toca una cuenta para corregir cuánto hay.</div>' +
         '<div class="mt24"><div class="fila gris" style="font-size: 12px"><span>Gastado este mes</span><span>' + plata(r.gastos) + (meta ? " de " + plata(meta) : "") + '</span></div>' +
         '<div class="barra mt8' + (meta && r.gastos > meta ? " alto" : "") + '"><div style="width: ' + Math.min(100, pct(r.gastos, meta)) + '%"></div></div></div>';
       var ult = todos().filter(function (m) { return m.tipo !== "Saldo inicial" && m.tipo !== "Ingreso previo"; })
@@ -464,6 +471,12 @@
         return '<button class="anillo' + (S.grupo === g.n ? " si" : "") + '" data-a="grupo" data-v="' + g.n + '" aria-label="' + g.n + ': ' + p + ' %">' + anillo(p, lleno) +
           '<span class="n">' + g.n + '</span><span class="s' + (lleno ? " shu" : "") + '">' + (lleno ? (usado > meta ? "se pasó" : "al límite") : Math.round(g.p * 100) + " % · " + plata(meta)) + '</span></button>';
       }).join("") + '</div>';
+
+      var hayPresupuesto = categorias().some(function (c) { return c.presupuesto > 0; }) || bolsillos().some(function (b) { return b.aporte > 0; });
+      h += hayPresupuesto
+        ? '<div style="text-align: right"><button class="enlace" data-a="ir" data-v="ajustes">editar presupuesto</button></div>'
+        : '<div class="caja mt16"><div class="etq-s">Presupuesto</div><div style="font-size: 14px; margin-top: 6px; line-height: 1.5">Aún no tienen presupuesto. Escriban cuánto esperan gastar en cada cosa este mes.</div>' +
+          '<button class="boton chico mt16" style="width: 100%" data-a="ir" data-v="ajustes">Armar el presupuesto</button></div>';
 
       GRUPOS.slice(3).forEach(function (g) {
         var usado = r.gastoGrupo[g.n] || 0;
@@ -491,7 +504,7 @@
           return '<div class="tres"><div><div style="font-size: 15px">' + esc(c.nombre) + '</div><div class="gris" style="font-size: 11px; margin-top: 2px">' +
             (pagado ? "pagado " + plata(pagado) : "presupuesto " + plata(c.presupuesto)) + '</div></div>' +
             PERSONAS.map(function (p) { return '<div class="d"><span class="p">' + p.toUpperCase() + '</span><span class="mincho" style="font-size: 15px">' + plata(base * r.parte[p]) + '</span></div>'; }).join("") + '</div>';
-        }).join("") : '<div class="vacio">Marca categorías "de la casa" en Ajustes.</div>') + '</div>';
+        }).join("") : '<div class="vacio">Cuando paguen algo de la casa (o le pongan presupuesto), aquí sale cuánto le toca a cada uno.</div>') + '</div>';
 
       if (r.casa.total) {
         var debe = r.debe, deudor = debe > 0 ? "Manuel" : "Juliana", acreedor = debe > 0 ? "Juliana" : "Manuel";
@@ -507,18 +520,19 @@
     function vBolsillos() {
       var b = balance();
       var total = b.guardado.Juliana + b.guardado.Manuel;
-      var h = '<h1>Bolsillos</h1><div class="etq" style="margin-top: 14px">Guardado entre los dos</div>' +
+      var h = '<h1>Bolsillos</h1><div class="gris" style="font-size: 13px; margin-top: 6px; line-height: 1.5">Plata apartada dentro de sus cuentas para cada meta.</div>' +
+        '<div class="etq" style="margin-top: 18px">Apartado entre los dos</div>' +
         '<div class="grande" style="font-size: 38px; margin-top: 4px">' + plata(total) + '</div>' +
         '<div class="gris" style="font-size: 13px; margin-top: 4px">Juliana ' + plata(b.guardado.Juliana) + ' · Manuel ' + plata(b.guardado.Manuel) + '</div>' +
         '<div class="lista" style="margin-top: 20px; border-top: 1px solid var(--linea)">' +
         bolsillos().map(function (x) {
           var d = b.bols[x.nombre] || { total: 0 }, p = pct(d.total, x.meta);
-          return '<div style="padding: 12px 0; border-bottom: 1px solid var(--linea2); display: flex; flex-direction: column; gap: 8px">' +
-            '<div class="fila"><span style="font-size: 15px">' + esc(x.nombre) + '</span><span class="mincho" style="font-size: 17px">' + plata(d.total) + '</span></div>' +
-            '<div class="barra"><div style="width: ' + (x.meta ? Math.min(100, p) : 0) + '%"></div></div>' +
-            '<div class="fila gris" style="font-size: 11px"><span>' + (x.meta ? "meta " + plata(x.meta) : "sin meta") +
-            (d.Juliana || d.Manuel ? " · J " + plata(d.Juliana || 0) + " · M " + plata(d.Manuel || 0) : "") + '</span><span>' + (x.meta ? (p >= 100 ? '<span class="shu">lista</span>' : p + " %") : "") + '</span></div></div>';
-        }).join("") + '</div>' +
+          return '<button style="width: 100%; background: none; border: 0; text-align: left; padding: 12px 0; border-bottom: 1px solid var(--linea2); display: flex; flex-direction: column; gap: 8px" data-a="ajustar" data-v="' + esc(x.nombre) + '" data-bolsillo="1">' +
+            '<div class="fila" style="width: 100%"><span style="font-size: 15px">' + esc(x.nombre) + '</span><span class="mincho" style="font-size: 17px">' + plata(d.total) + '</span></div>' +
+            '<div class="barra" style="width: 100%"><div style="width: ' + (x.meta ? Math.min(100, p) : 0) + '%"></div></div>' +
+            '<div class="fila gris" style="font-size: 11px; width: 100%"><span>' + (x.meta ? "meta " + plata(x.meta) : "sin meta") +
+            (d.Juliana || d.Manuel ? " · J " + plata(d.Juliana || 0) + " · M " + plata(d.Manuel || 0) : "") + '</span><span>' + (x.meta ? (p >= 100 ? '<span class="shu">lista</span>' : p + " %") : "") + '</span></div></button>';
+        }).join("") + '</div><div class="gris" style="font-size: 11px; margin-top: 6px">Toca un bolsillo para corregir cuánto hay.</div>' +
         '<button class="boton linea mt16" data-a="anotar" data-v="Ahorro">Mover plata a un bolsillo</button>';
       return { html: h, nav: "bolsillos" };
     }
@@ -536,7 +550,7 @@
 
     function vAnotar() {
       var t = A.tipo;
-      var signoT = t === "Gasto" || (t === "Ahorro" && A.sacar === false) ? "− " : t === "Ingreso" ? "+ " : "";
+      var signoT = t === "Gasto" ? "− " : t === "Ingreso" ? "+ " : "";
       var h = '<div class="fila" style="align-items: center"><button class="x" data-a="cerrar" aria-label="Cerrar">' + ICONO_X + '</button>' +
         '<span class="etq">Anotar</span><input type="date" aria-label="Fecha" data-a2="fecha" value="' + A.fecha + '" max="' + hoy() + '" ' +
         'style="width: 118px; border: 0; background: transparent; font-size: 12px; color: var(--gris); text-align: right; padding: 0"></div>' +
@@ -548,7 +562,7 @@
 
       if (t === "Ahorro") h += chips(["Guardar", "Sacar"], A.sacar ? "Sacar" : "Guardar", "sacar");
       h += '<div class="etq-s mt16">' + (t === "Traslado" ? "Desde" : "Quién") + '</div>' + chips(PERSONAS, A.quien, "quien");
-      h += '<div class="etq-s mt16">' + (t === "Traslado" ? "Cuenta de salida" : t === "Ahorro" ? (A.sacar ? "A qué cuenta" : "De qué cuenta") : "Cuenta") + '</div>' + chips(CUENTAS, A.cuenta, "cuenta", false, true);
+      h += '<div class="etq-s mt16">' + (t === "Traslado" ? "Cuenta de salida" : t === "Ahorro" ? "En qué cuenta está" : "Cuenta") + '</div>' + chips(CUENTAS, A.cuenta, "cuenta", false, true);
       if (t === "Traslado") {
         h += '<div class="etq-s mt16">Hacia</div>' + chips(PERSONAS, A.haciaPersona, "haciaPersona") + chips(CUENTAS, A.haciaCuenta, "haciaCuenta", false, true);
       } else {
@@ -563,6 +577,23 @@
         }).join("") + '</div>' +
         (S.error && S.error !== "sin conexión" ? '<div class="shu" style="font-size: 13px; text-align: center; margin-top: 8px">' + esc(S.error) + '</div>' : "") +
         '<button class="boton mt8" data-a="guardarMov">Guardar</button>';
+      return { html: h, nav: false };
+    }
+
+    // Corregir cuánto hay en una cuenta o bolsillo: guarda la diferencia como un ajuste (no cuenta como ingreso ni gasto)
+    function actualDe(z) {
+      var b = balance();
+      return z.bolsillo ? ((b.bols[z.nombre] || {})[z.persona] || 0) : b.saldo[z.persona][z.nombre];
+    }
+    function vSaldo() {
+      var actual = actualDe(Z);
+      var h = '<div class="fila" style="align-items: center"><button class="x" data-a="cerrar" aria-label="Cerrar">' + ICONO_X + '</button><span class="etq">Corregir saldo</span><span style="width: 44px"></span></div>' +
+        '<h1 class="mt24">' + esc(Z.nombre) + '</h1>' +
+        '<div class="etq-s mt24">De quién</div>' + chips(PERSONAS, Z.persona, "saldoPersona") +
+        '<div class="fila mt24" style="font-size: 14px"><span class="gris">La app dice que hay</span><span class="mincho" style="font-size: 18px">' + plata(actual) + '</span></div>' +
+        '<div class="campo mt16"><label for="real">Lo que hay de verdad</label><input id="real" inputmode="numeric" placeholder="$ 0" data-plata autofocus></div>' +
+        '<p class="gris" style="font-size: 13px; line-height: 1.6; margin: 16px 0 0">Úsalo para llenar una cuenta que dejaste en blanco o para cuadrar cuando no coincida con el banco. No cuenta como ingreso ni como gasto.</p>' +
+        '<button class="boton mt32" data-a="guardarSaldo">Guardar</button>';
       return { html: h, nav: false };
     }
 
@@ -628,7 +659,7 @@
       if (!YO || (!PRUEBA && !CLAVE) || S.pantalla === "entrar") v = vEntrar();
       else if (!D) v = { html: '<div class="cargando"><div class="sello estampa" style="margin: 0 auto">家計</div><div class="gris mt16" style="font-size: 13px">' + (S.error || "Cargando…") + '</div></div>', nav: false };
       else if (!D.ajustes || !D.ajustes.iniciado || S.pantalla === "empezar") { if (!W) W = nuevoW(); v = vEmpezar(); }
-      else v = ({ inicio: vInicio, mes: vMes, bolsillos: vBolsillos, anotar: vAnotar, historial: vHistorial, ajustes: vAjustes }[S.pantalla] || vInicio)();
+      else v = ({ inicio: vInicio, mes: vMes, bolsillos: vBolsillos, anotar: vAnotar, historial: vHistorial, ajustes: vAjustes, saldo: vSaldo }[S.pantalla] || vInicio)();
       document.getElementById("raiz").innerHTML = '<main class="app' + (v.nav ? "" : " sin-nav") + '">' + v.html + '</main>' + (v.nav ? nav(v.nav) : "");
       if (foco && document.getElementById(foco)) document.getElementById(foco).focus();
     }
@@ -735,6 +766,20 @@
         A.quien = el.dataset.deudor; A.haciaPersona = el.dataset.deudor === "Manuel" ? "Juliana" : "Manuel";
         A.monto = String(v); A.claras = true; A.nota = "Cuentas claras de " + nombreMes(S.mes);
         ir("anotar");
+      },
+      ajustar: function (v, el) { Z = { nombre: v, bolsillo: !!el.dataset.bolsillo, persona: YO }; ir("saldo"); },
+      saldoPersona: function (v) { Z.persona = v; pintar(); },
+      guardarSaldo: function () {
+        var el = document.getElementById("real");
+        if (!el.value.trim()) { el.focus(); return; }
+        var diff = digitos(el.value) - actualDe(Z);
+        if (!diff) { ir(S.anterior || "inicio"); avisar("Ya estaba bien"); return; }
+        PEND.push({ id: nuevoId(), fecha: hoy(), tipo: "Saldo inicial", persona: Z.persona, cuenta: Z.bolsillo ? "" : Z.nombre,
+          categoria: Z.bolsillo ? Z.nombre : "", valor: diff, casa: false, nota: "Ajuste de saldo", anoto: YO, anotado: new Date().toISOString() });
+        guardarLocal("maju-pendientes", PEND);
+        ir(S.anterior || "inicio");
+        avisar("Saldo corregido · " + Z.nombre + " de " + Z.persona);
+        sincronizar();
       },
       tocarMov: function (v) { S.borrar = S.borrar === v ? "" : v; pintar(); },
       noBorrar: function () { S.borrar = ""; pintar(); },

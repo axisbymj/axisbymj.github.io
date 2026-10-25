@@ -1,0 +1,836 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>MaJu</title>
+  <meta name="theme-color" content="#F4F1EA">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="MaJu">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="maju-192.png">
+  <link rel="apple-touch-icon" href="maju-apple.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;600&family=Zen+Kaku+Gothic+New:wght@400;500&display=swap">
+  <style>
+    :root {
+      --papel: #F4F1EA; --tinta: #1F1E1C; --gris: #6B675F; --linea: #DCD6CA; --linea2: #E6E1D6;
+      --borde: #CFC8BA; --shu: #B5482F; --tinta2: #8C8578;
+      --mincho: "Shippori Mincho", "Yu Mincho", serif;
+      --gothic: "Zen Kaku Gothic New", system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; background: var(--papel); color: var(--tinta); font-family: var(--gothic); }
+    body { min-height: 100dvh; }
+    button, input, select { font-family: inherit; color: inherit; }
+    button { cursor: pointer; }
+    a { color: inherit; text-decoration: none; }
+    .app { max-width: 480px; margin: 0 auto; min-height: 100dvh; display: flex; flex-direction: column;
+      padding: calc(24px + env(safe-area-inset-top)) 24px calc(110px + env(safe-area-inset-bottom)); }
+    .app.sin-nav { padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+    .mincho { font-family: var(--mincho); }
+    .gris { color: var(--gris); }
+    .shu { color: var(--shu); }
+    .etq { font-size: 12px; letter-spacing: 3px; color: var(--gris); text-transform: uppercase; }
+    .etq-s { font-size: 11px; letter-spacing: 3px; color: var(--gris); text-transform: uppercase; }
+    .fila { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+    .sello { width: 34px; height: 34px; background: var(--shu); border-radius: 3px; display: flex; align-items: center;
+      justify-content: center; color: var(--papel); font-family: var(--mincho); font-size: 12px; line-height: 1;
+      writing-mode: vertical-rl; letter-spacing: 1px; flex: none; }
+    h1 { margin: 0; font-family: var(--mincho); font-weight: 400; font-size: 34px; }
+    .grande { font-family: var(--mincho); font-size: 44px; letter-spacing: -0.5px; line-height: 1.15; margin-top: 6px; }
+    .dos { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--linea); border-bottom: 1px solid var(--linea); margin-top: 26px; }
+    .dos > div { padding: 18px 16px 18px 0; display: flex; flex-direction: column; gap: 8px; }
+    .dos > div + div { padding: 18px 0 18px 16px; border-left: 1px solid var(--linea); }
+    .dos .nombre { font-family: var(--mincho); font-size: 20px; }
+    .dos .fila { font-size: 13px; }
+    .lista { display: flex; flex-direction: column; }
+    .item { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--linea2); }
+    .item .t { font-size: 15px; }
+    .item .s { font-size: 11px; color: var(--gris); margin-top: 2px; }
+    .item .v { font-family: var(--mincho); font-size: 17px; white-space: nowrap; }
+    .barra { height: 2px; background: var(--linea); }
+    .barra > div { height: 2px; background: var(--tinta); max-width: 100%; }
+    .barra.alto > div { background: var(--shu); }
+    .mt8 { margin-top: 8px; } .mt16 { margin-top: 16px; } .mt24 { margin-top: 24px; } .mt32 { margin-top: 32px; }
+    .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .chips.desliza { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-left: -24px; margin-right: -24px; padding: 0 24px; }
+    .chips.desliza::-webkit-scrollbar { display: none; }
+    .chip { flex: none; height: 40px; padding: 0 16px; border-radius: 20px; border: 1px solid var(--borde); background: transparent; font-size: 14px; }
+    .chip.si { background: var(--tinta); border-color: var(--tinta); color: var(--papel); }
+    .chip.si.rojo { background: var(--shu); border-color: var(--shu); color: #fff; }
+    .boton { height: 54px; border-radius: 27px; border: 0; background: var(--tinta); color: var(--papel); font-size: 15px;
+      letter-spacing: 1px; display: flex; align-items: center; justify-content: center; width: 100%; }
+    .boton.linea { background: transparent; border: 1px solid var(--tinta); color: var(--tinta); height: 48px; }
+    .boton.chico { height: 40px; width: auto; padding: 0 18px; font-size: 13px; }
+    .boton:disabled { opacity: .4; }
+    .enlace { background: none; border: 0; padding: 8px 0; font-size: 13px; color: var(--gris); text-decoration: underline; text-underline-offset: 3px; }
+    .campo { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--linea); }
+    .campo label { font-size: 15px; }
+    .campo input { width: 150px; text-align: right; border: 0; background: transparent; font-family: var(--mincho); font-size: 18px; padding: 6px 0; outline: none; }
+    .campo:focus-within { border-bottom-color: var(--tinta); }
+    .texto { width: 100%; border: 0; border-bottom: 1px solid var(--linea); background: transparent; font-size: 15px; padding: 10px 0; outline: none; }
+    .texto:focus { border-bottom-color: var(--tinta); }
+    nav.abajo { position: fixed; left: 0; right: 0; bottom: 0; background: var(--papel); }
+    nav.abajo > div { max-width: 480px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 24px calc(14px + env(safe-area-inset-bottom)); }
+    .tabs { display: flex; gap: 26px; }
+    .tab { background: none; border: 0; padding: 10px 0; font-size: 14px; color: var(--gris); display: flex; flex-direction: column; align-items: center; gap: 5px; }
+    .tab::after { content: ""; width: 4px; height: 4px; border-radius: 50%; }
+    .tab.si { color: var(--tinta); }
+    .tab.si::after { background: var(--shu); }
+    .mas { width: 58px; height: 58px; border-radius: 50%; background: var(--tinta); border: 0; display: flex; align-items: center; justify-content: center; }
+    .x { width: 44px; height: 44px; background: none; border: 0; display: flex; align-items: center; justify-content: flex-start; padding: 0; }
+    .tipos { display: flex; justify-content: space-between; border-bottom: 1px solid var(--linea); margin-top: 4px; }
+    .tipos button { background: none; border: 0; padding: 12px 4px; font-size: 15px; color: var(--gris); border-bottom: 1.5px solid transparent; margin-bottom: -1px; }
+    .tipos button.si { color: var(--tinta); border-bottom-color: var(--tinta); }
+    .monto { text-align: center; font-family: var(--mincho); font-size: 50px; letter-spacing: -0.5px; margin-top: 18px; min-height: 62px; }
+    .teclado { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 12px; }
+    .teclado button { height: 52px; background: none; border: 0; font-family: var(--mincho); font-size: 24px; }
+    .teclado button:active { background: var(--linea2); border-radius: 26px; }
+    .interruptor { display: flex; justify-content: space-between; align-items: center; width: 100%; background: none; border: 0; padding: 12px 0; font-size: 14px; text-align: left; }
+    .interruptor .riel { width: 40px; height: 22px; border-radius: 11px; background: var(--linea); position: relative; flex: none; transition: background .2s; }
+    .interruptor .riel::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--papel); transition: left .2s; }
+    .interruptor.si .riel { background: var(--tinta); }
+    .interruptor.si .riel::after { left: 21px; }
+    .anillos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 24px; }
+    .anillo { background: none; border: 0; padding: 4px 0; display: flex; flex-direction: column; align-items: center; gap: 6px; border-radius: 8px; }
+    .anillo.si { background: var(--linea2); }
+    .anillo .n { font-size: 13px; }
+    .anillo .s { font-size: 11px; color: var(--gris); }
+    .caja { padding: 14px 16px; border: 1px solid var(--tinta); border-radius: 4px; }
+    .tres { display: grid; grid-template-columns: 1.2fr 1fr 1fr; align-items: baseline; padding: 11px 0; border-bottom: 1px solid var(--linea2); }
+    .tres .d { text-align: right; display: flex; flex-direction: column; gap: 2px; }
+    .tres .p { font-size: 10px; letter-spacing: 1px; color: var(--gris); }
+    .aviso { position: fixed; left: 50%; bottom: calc(100px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--tinta);
+      color: var(--papel); padding: 12px 18px; border-radius: 24px; font-size: 13px; display: flex; gap: 10px; align-items: center;
+      max-width: calc(100% - 48px); animation: sube .25s ease-out; z-index: 5; }
+    .aviso .sello { width: 22px; height: 22px; font-size: 9px; }
+    @keyframes sube { from { opacity: 0; transform: translate(-50%, 8px); } }
+    .estampa { animation: estampa .35s ease-out; }
+    @keyframes estampa { from { transform: scale(1.6) rotate(-8deg); opacity: 0; } }
+    .vacio { padding: 28px 0; text-align: center; font-size: 14px; color: var(--gris); line-height: 1.6; }
+    .pasos { display: flex; gap: 6px; }
+    .pasos span { width: 18px; height: 2px; background: var(--linea); }
+    .pasos span.si { background: var(--tinta); }
+    .bols2 { display: grid; grid-template-columns: 1fr 100px 100px; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--linea); }
+    .bols2 input { width: 100%; text-align: right; border: 0; background: transparent; font-family: var(--mincho); font-size: 16px; padding: 6px 0; outline: none; }
+    .confirmar { display: flex; gap: 8px; justify-content: flex-end; padding: 0 0 12px; border-bottom: 1px solid var(--linea2); }
+    .mes-sel { display: flex; align-items: center; gap: 4px; }
+    .mes-sel button { width: 36px; height: 36px; background: none; border: 0; font-size: 18px; color: var(--gris); }
+    .cargando { margin: auto; text-align: center; }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  </style>
+</head>
+<body>
+  <div id="raiz"></div>
+  <div id="avisos"></div>
+
+  <script>
+    // ——— Configuración ———
+    // URL de la implementación de Apps Script (maju-google/Codigo.gs). Vacía = modo de prueba (se guarda solo en este celular).
+    var URL_MAJU = "https://script.google.com/macros/s/AKfycbzIE5ZKbiBV64JwnLPq88YLkXVwhuIfLZJeuAhCojXIWWb1Q1mgtVJnyiT1ErvBosmI1A/exec";
+    var PRUEBA = URL_MAJU.indexOf("https://") !== 0;
+
+    var PERSONAS = ["Juliana", "Manuel"];
+    var CUENTAS = ["Nequi", "Nu", "Bancolombia", "Efectivo", "BBVA"];
+    // Qué parte de los ingresos del mes va a cada grupo (como en el Excel)
+    var GRUPOS = [
+      { n: "Necesidades", p: 0.6 }, { n: "Gustos", p: 0.2 }, { n: "Ahorro", p: 0.2 }, { n: "Deudas", p: 0 }, { n: "Inversiones", p: 0 }
+    ];
+    var MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+
+    // Solo para el modo de prueba (las de verdad vienen de la hoja de Google)
+    var CATEGORIAS_PRUEBA = [
+      ["Arriendo", "Necesidades", 0, 1], ["Mercado", "Necesidades", 900000, 1], ["Cuidado personal", "Necesidades", 0, 0],
+      ["Medicamentos", "Necesidades", 0, 0], ["Luz", "Necesidades", 132560, 1], ["Agua", "Necesidades", 119020, 1],
+      ["Gas", "Necesidades", 0, 1], ["Celular", "Necesidades", 0, 0], ["WiFi", "Necesidades", 130000, 1],
+      ["Transporte", "Necesidades", 182000, 0], ["Salud", "Necesidades", 441000, 0], ["Mascotas", "Necesidades", 381000, 1],
+      ["Lavandería", "Necesidades", 0, 1], ["Gimnasio", "Gustos", 147000, 0], ["Salidas", "Gustos", 0, 0],
+      ["Entretenimiento", "Gustos", 0, 0], ["Comidas fuera", "Gustos", 0, 0], ["Viajes", "Gustos", 0, 0], ["Uñas", "Gustos", 0, 0],
+      ["Cabello", "Gustos", 0, 0], ["Ropa y zapatos", "Gustos", 0, 0], ["Regalos", "Gustos", 0, 0], ["Compras", "Gustos", 0, 0],
+      ["Suscripciones", "Gustos", 0, 0], ["Tecnología", "Gustos", 0, 0], ["Cursos", "Gustos", 0, 0],
+      ["TC Bancolombia", "Deudas", 0, 0], ["TC Bogotá", "Deudas", 0, 0], ["Deuda a una persona", "Deudas", 0, 0],
+      ["ETFs", "Inversiones", 0, 0], ["CDTs", "Inversiones", 0, 0], ["Acciones", "Inversiones", 0, 0],
+      ["Inversión inmobiliaria", "Inversiones", 0, 0], ["Criptomonedas", "Inversiones", 0, 0],
+      ["Sueldo", "Ingresos", 0, 0], ["Terapias", "Ingresos", 0, 0], ["Clases", "Ingresos", 0, 0], ["Otro ingreso", "Ingresos", 0, 0]
+    ].map(function (c) { return { nombre: c[0], grupo: c[1], presupuesto: c[2], casa: !!c[3], activa: true }; });
+    var BOLSILLOS_PRUEBA = [
+      ["Fondo de emergencias", 1000000, 120000], ["Vivienda", 50000000, 120000], ["Viajes", 0, 60000], ["Regalos", 0, 60000],
+      ["Celebraciones", 7000000, 120000], ["iPhone 17 Pro Max", 4210000, 0], ["Moto", 1000000, 120000]
+    ].map(function (b) { return { nombre: b[0], meta: b[1], aporte: b[2], activo: true }; });
+
+    // ——— Utilidades ———
+    function leer(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
+    function guardarLocal(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+    function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+    function miles(n) { return String(Math.round(Math.abs(n))).replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
+    function plata(n) { return (n < 0 ? "− " : "") + "$ " + miles(n); }
+    function digitos(s) { return Number(String(s || "").replace(/\D/g, "")) || 0; }
+    function dos(n) { return (n < 10 ? "0" : "") + n; }
+    function hoy() { var d = new Date(); return d.getFullYear() + "-" + dos(d.getMonth() + 1) + "-" + dos(d.getDate()); }
+    function mesActual() { return hoy().slice(0, 7); }
+    function nombreMes(m) { return MESES[Number(m.slice(5, 7)) - 1]; }
+    function moverMes(m, k) { var a = Number(m.slice(0, 4)), b = Number(m.slice(5, 7)) - 1 + k; a += Math.floor(b / 12); b = ((b % 12) + 12) % 12; return a + "-" + dos(b + 1); }
+    function fechaBonita(f) {
+      if (f === hoy()) return "hoy";
+      var p = f.split("-");
+      return Number(p[2]) + " de " + MESES[Number(p[1]) - 1];
+    }
+    function nuevoId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+    function pct(a, b) { return b > 0 ? Math.round((a / b) * 100) : 0; }
+
+    // ——— Estado ———
+    var D = leer("maju-datos") || null;              // lo último que llegó de la hoja
+    var PEND = leer("maju-pendientes") || [];        // movimientos anotados que aún no llegan a la hoja
+    var CLAVE = leer("maju-clave") || "";
+    var YO = leer("maju-yo") || "";
+    var S = { pantalla: YO && (PRUEBA || CLAVE) ? "inicio" : "entrar", anterior: "inicio", mes: mesActual(), grupo: "", borrar: "", cargando: false, error: "" };
+    var A = null;  // lo que se está anotando
+    var W = null;  // pasos de "empezar de cero"
+
+    // ——— Hablar con la hoja de Google ———
+    function llamar(accion, cuerpo) {
+      if (PRUEBA) return Promise.resolve(prueba(accion, cuerpo || {}));
+      var datos = Object.assign({ accion: accion, clave: CLAVE }, cuerpo || {});
+      return fetch(URL_MAJU, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(datos) })
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+          if (!j.ok) throw new Error(j.error === "clave" ? "clave" : (j.detalle || j.error || "error"));
+          return j;
+        });
+    }
+
+    // Imita la hoja de Google guardando todo en el celular
+    function prueba(accion, c) {
+      var B = leer("maju-prueba") || { movimientos: [], categorias: CATEGORIAS_PRUEBA, bolsillos: BOLSILLOS_PRUEBA, ajustes: {} };
+      var ids = {};
+      B.movimientos.forEach(function (m) { ids[m.id] = true; });
+      if (accion === "guardar" || accion === "empezar") {
+        if (accion === "empezar") { B.movimientos = []; ids = {}; B.ajustes.iniciado = hoy(); }
+        (c.movimientos || []).forEach(function (m) { if (!ids[m.id]) B.movimientos.push(m); });
+      }
+      if (accion === "borrar") B.movimientos = B.movimientos.filter(function (m) { return m.id !== c.id; });
+      if (accion === "guardarCategorias") B.categorias = c.categorias;
+      if (accion === "guardarBolsillos") B.bolsillos = c.bolsillos;
+      guardarLocal("maju-prueba", B);
+      return JSON.parse(JSON.stringify(Object.assign({ ok: true }, B)));
+    }
+
+    function recibir(j) {
+      D = { movimientos: j.movimientos || [], categorias: j.categorias || [], bolsillos: j.bolsillos || [], ajustes: j.ajustes || {} };
+      var ya = {};
+      D.movimientos.forEach(function (m) { ya[m.id] = true; });
+      PEND = PEND.filter(function (m) { return !ya[m.id]; });
+      guardarLocal("maju-datos", D);
+      guardarLocal("maju-pendientes", PEND);
+    }
+
+    // Trae lo último y de paso envía lo pendiente
+    function sincronizar() {
+      var p = PEND.length ? llamar("guardar", { movimientos: PEND }) : llamar("datos");
+      return p.then(function (j) { recibir(j); S.error = ""; pintar(); })
+        .catch(function (e) {
+          if (e.message === "clave") { salir(); S.error = "La clave no es correcta."; pintar(); return; }
+          S.error = "sin conexión";
+          pintar();
+        });
+    }
+
+    function todos() { return (D ? D.movimientos : []).concat(PEND.map(function (m) { return Object.assign({ pendiente: true }, m); })); }
+    function categorias() { return (D ? D.categorias : []).filter(function (c) { return c.activa !== false; }); }
+    function bolsillos() { return (D ? D.bolsillos : []).filter(function (b) { return b.activo !== false; }); }
+    function catDe(nombre) { return (D ? D.categorias : []).filter(function (c) { return c.nombre === nombre; })[0]; }
+
+    // ——— Cuentas ———
+    function balance() {
+      var saldo = {}, guardado = {}, bols = {};
+      PERSONAS.forEach(function (p) { saldo[p] = {}; guardado[p] = 0; CUENTAS.forEach(function (c) { saldo[p][c] = 0; }); });
+      function suma(p, c, v) { if (!saldo[p]) return; saldo[p][c] = (saldo[p][c] || 0) + v; }
+      function bolsa(p, b, v) { if (guardado[p] == null) return; guardado[p] += v; bols[b] = bols[b] || { total: 0 }; bols[b].total += v; bols[b][p] = (bols[b][p] || 0) + v; }
+      todos().forEach(function (m) {
+        var v = Number(m.valor) || 0;
+        if (m.tipo === "Saldo inicial") { if (m.cuenta) suma(m.persona, m.cuenta, v); else bolsa(m.persona, m.categoria, v); }
+        else if (m.tipo === "Ingreso") suma(m.persona, m.cuenta, v);
+        else if (m.tipo === "Gasto") suma(m.persona, m.cuenta, -v);
+        else if (m.tipo === "Ahorro") { suma(m.persona, m.cuenta, -v); bolsa(m.persona, m.categoria, v); }
+        else if (m.tipo === "Retiro ahorro") { bolsa(m.persona, m.categoria, -v); suma(m.persona, m.cuenta, v); }
+        else if (m.tipo === "Traslado") { suma(m.persona, m.cuenta, -v); suma(m.haciaPersona, m.haciaCuenta, v); }
+      });
+      var disp = {};
+      PERSONAS.forEach(function (p) { disp[p] = CUENTAS.reduce(function (a, c) { return a + saldo[p][c]; }, 0); });
+      return { saldo: saldo, disp: disp, guardado: guardado, bols: bols };
+    }
+
+    function delMes(mes) {
+      var r = { ingresos: {}, gastoGrupo: {}, gastoCat: {}, gastoPersona: {}, casa: { total: 0 }, claras: 0, gastos: 0 };
+      PERSONAS.forEach(function (p) { r.ingresos[p] = 0; r.gastoPersona[p] = 0; r.casa[p] = 0; });
+      GRUPOS.forEach(function (g) { r.gastoGrupo[g.n] = 0; });
+      var casaCat = {};
+      todos().forEach(function (m) {
+        if (String(m.fecha).slice(0, 7) !== mes) return;
+        var v = Number(m.valor) || 0;
+        if (m.tipo === "Ingreso" || m.tipo === "Ingreso previo") r.ingresos[m.persona] = (r.ingresos[m.persona] || 0) + v;
+        if (m.tipo === "Gasto") {
+          var c = catDe(m.categoria), g = c ? c.grupo : "Gustos";
+          r.gastoGrupo[g] = (r.gastoGrupo[g] || 0) + v;
+          r.gastoCat[m.categoria] = (r.gastoCat[m.categoria] || 0) + v;
+          r.gastoPersona[m.persona] = (r.gastoPersona[m.persona] || 0) + v;
+          r.gastos += v;
+          if (m.casa) { r.casa.total += v; r.casa[m.persona] = (r.casa[m.persona] || 0) + v; casaCat[m.categoria] = (casaCat[m.categoria] || 0) + v; }
+        }
+        if (m.tipo === "Ahorro") { r.gastoGrupo.Ahorro += v; r.gastoCat[m.categoria] = (r.gastoCat[m.categoria] || 0) + v; }
+        if (m.tipo === "Retiro ahorro") { r.gastoGrupo.Ahorro -= v; r.gastoCat[m.categoria] = (r.gastoCat[m.categoria] || 0) - v; }
+        // Lo que Manuel le pasó a Juliana (o al revés) para quedar a paz y salvo
+        if (m.tipo === "Traslado" && m.categoria === "Cuentas claras") r.claras += m.persona === "Manuel" ? v : -v;
+      });
+      r.totalIngresos = r.ingresos.Juliana + r.ingresos.Manuel;
+      r.parte = { Juliana: r.totalIngresos ? r.ingresos.Juliana / r.totalIngresos : 0.5 };
+      r.parte.Manuel = 1 - r.parte.Juliana;
+      r.casaCat = casaCat;
+      // > 0: Manuel le debe a Juliana · < 0: Juliana le debe a Manuel
+      r.debe = Math.round(r.casa.Juliana - r.casa.total * r.parte.Juliana - r.claras);
+      return r;
+    }
+
+    function metaGrupo(g, r) {
+      if (r.totalIngresos) return Math.round(g.p * r.totalIngresos);
+      if (g.n === "Ahorro") return bolsillos().reduce(function (a, b) { return a + (b.aporte || 0); }, 0);
+      return categorias().filter(function (c) { return c.grupo === g.n; }).reduce(function (a, c) { return a + (c.presupuesto || 0); }, 0);
+    }
+
+    // ——— Piezas ———
+    var ICONO_MAS = '<svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><path d="M11 2v18M2 11h18" stroke="#F4F1EA" stroke-width="1.6" stroke-linecap="round" fill="none"/></svg>';
+    var ICONO_QUITAR = '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 2l8 8M10 2L2 10" stroke="#6B675F" stroke-width="1.4" stroke-linecap="round" fill="none"/></svg>';
+    var ICONO_X ='<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M3 3l12 12M15 3L3 15" stroke="#1F1E1C" stroke-width="1.5" stroke-linecap="round" fill="none"/></svg>';
+
+    function nav(activa) {
+      var t = [["inicio", "Inicio"], ["mes", "Mes"], ["bolsillos", "Bolsillos"]];
+      return '<nav class="abajo"><div><div class="tabs">' +
+        t.map(function (x) { return '<button class="tab' + (activa === x[0] ? " si" : "") + '" data-a="ir" data-v="' + x[0] + '">' + x[1] + '</button>'; }).join("") +
+        '</div><button class="mas" data-a="anotar" aria-label="Anotar un movimiento">' + ICONO_MAS + '</button></div></nav>';
+    }
+
+    function chips(lista, elegido, accion, rojo, desliza) {
+      return '<div class="chips' + (desliza ? " desliza" : "") + '">' + lista.map(function (v) {
+        return '<button class="chip' + (v === elegido ? " si" + (rojo ? " rojo" : "") : "") + '" data-a="' + accion + '" data-v="' + esc(v) + '">' + esc(v) + '</button>';
+      }).join("") + '</div>';
+    }
+
+    function anillo(porc, rojo) {
+      var C = 188.5, largo = Math.max(0, Math.min(1, porc / 100)) * C;
+      var color = rojo ? "#B5482F" : "#1F1E1C";
+      return '<svg width="76" height="76" viewBox="0 0 76 76" aria-hidden="true">' +
+        '<circle cx="38" cy="38" r="30" fill="none" stroke="#DCD6CA" stroke-width="2"/>' +
+        (largo > 0 ? '<circle cx="38" cy="38" r="30" fill="none" stroke="' + color + '" stroke-width="4" stroke-linecap="round" stroke-dasharray="' + largo.toFixed(1) + ' ' + C + '" transform="rotate(-90 38 38)"/>' : "") +
+        '<text x="38" y="43" text-anchor="middle" font-family="Shippori Mincho, serif" font-size="16" fill="' + color + '">' + porc + '%</text></svg>';
+    }
+
+    function selectorMes() {
+      return '<div class="mes-sel"><button data-a="mes" data-v="-1" aria-label="Mes anterior">‹</button>' +
+        '<h1 style="text-transform: capitalize">' + nombreMes(S.mes) + '</h1>' +
+        (S.mes < mesActual() ? '<button data-a="mes" data-v="1" aria-label="Mes siguiente">›</button>' : '<span style="width: 36px"></span>') + '</div>';
+    }
+
+    function describe(m) {
+      if (m.tipo === "Traslado") return (m.categoria === "Cuentas claras" ? "Cuentas claras · " : "") + m.persona + " " + m.cuenta + " → " + m.haciaPersona + " " + m.haciaCuenta;
+      if (m.tipo === "Ahorro") return "A " + m.categoria + " · " + m.persona + " · " + m.cuenta;
+      if (m.tipo === "Retiro ahorro") return "Sacó de " + m.categoria + " · " + m.persona + " · " + m.cuenta;
+      if (m.tipo === "Saldo inicial") return m.persona + (m.cuenta ? " · " + m.cuenta : " · bolsillo");
+      if (m.tipo === "Ingreso previo") return "Ingreso del mes (ya estaba en las cuentas) · " + m.persona;
+      return (m.nota ? m.categoria + " · " : "") + m.persona + " · " + m.cuenta + (m.casa ? " · de la casa" : "");
+    }
+    function signo(m) {
+      if (m.tipo === "Gasto" || m.tipo === "Ahorro") return -1;
+      if (m.tipo === "Ingreso" || m.tipo === "Retiro ahorro" || m.tipo === "Saldo inicial") return 1;
+      return 0;
+    }
+    function filaMov(m, conBorrar) {
+      var s = signo(m), v = (s > 0 ? "+ " : s < 0 ? "− " : "") + "$ " + miles(m.valor);
+      var h = '<button class="item" style="width: 100%; background: none; border: 0; border-bottom: 1px solid var(--linea2); text-align: left; padding: 12px 0" ' +
+        (conBorrar ? 'data-a="tocarMov" data-v="' + esc(m.id) + '"' : 'data-a="ir" data-v="historial"') + '>' +
+        '<div><div class="t">' + esc(m.nota || (m.tipo === "Saldo inicial" ? "Saldo inicial" + (m.cuenta ? "" : " · " + m.categoria) : m.categoria || m.tipo)) + (m.pendiente ? ' <span class="shu" style="font-size: 11px">· sin enviar</span>' : "") + '</div>' +
+        '<div class="s">' + esc(describe(m)) + '</div></div>' +
+        '<div class="v' + (s > 0 ? "" : "") + '">' + v + '</div></button>';
+      if (conBorrar && S.borrar === m.id) {
+        h += '<div class="confirmar"><button class="boton linea chico" data-a="noBorrar">No</button>' +
+          '<button class="boton chico" style="background: var(--shu)" data-a="borrar" data-v="' + esc(m.id) + '">Borrar este movimiento</button></div>';
+      }
+      return h;
+    }
+
+    // ——— Pantallas ———
+    function vEntrar() {
+      var h = '<div style="margin: auto 0; display: flex; flex-direction: column; align-items: center; text-align: center">' +
+        '<div class="sello estampa" style="width: 64px; height: 64px; font-size: 22px; border-radius: 5px">家計</div>' +
+        '<h1 class="mt24">MaJu</h1><div class="gris mt8" style="font-size: 14px">Finanzas de Juliana y Manuel</div></div>' +
+        '<div class="etq-s mt32">¿Quién eres?</div>' + chips(PERSONAS, YO, "yo") +
+        (PRUEBA ? '<div class="gris mt24" style="font-size: 13px; line-height: 1.6">Modo de prueba: lo que anotes se guarda solo en este celular.</div>' :
+          '<div class="mt24"><label class="etq-s" for="clave">Clave</label><input id="clave" class="texto" type="password" autocomplete="current-password" value="' + esc(CLAVE) + '"></div>') +
+        (S.error ? '<div class="shu mt16" style="font-size: 13px">' + esc(S.error) + '</div>' : "") +
+        '<button class="boton mt32" data-a="entrar"' + (S.cargando ? " disabled" : "") + '>' + (S.cargando ? "Entrando…" : "Entrar") + '</button>';
+      return { html: h, nav: false };
+    }
+
+    function vEmpezar() {
+      var h = '<div class="fila" style="align-items: center"><div class="etq">Paso ' + W.paso + ' de 3</div><div class="pasos">' +
+        [1, 2, 3].map(function (n) { return '<span class="' + (n <= W.paso ? "si" : "") + '"></span>'; }).join("") + '</div></div>';
+      if (W.paso === 1) {
+        h += '<div style="display: flex; justify-content: center; margin-top: 30px"><svg width="96" height="96" viewBox="0 0 96 96" aria-hidden="true">' +
+          '<circle cx="48" cy="48" r="38" fill="none" stroke="#1F1E1C" stroke-width="5" stroke-linecap="round" stroke-dasharray="210 29" transform="rotate(-70 48 48)"/></svg></div>' +
+          '<h1 style="text-align: center; font-size: 30px; margin-top: 20px">Empecemos de cero</h1>' +
+          '<p class="gris" style="text-align: center; font-size: 14px; line-height: 1.6; margin: 10px 12px 0">Anota cuánto hay hoy en cada cuenta. Desde aquí todo empieza limpio.</p>';
+      }
+      if (W.paso < 3) {
+        var p = PERSONAS[W.paso - 1];
+        h += '<div class="fila mt24"><div class="mincho" style="font-size: 22px">' + p + '</div><div class="gris" style="font-size: 12px">' +
+          (W.paso === 1 ? "luego Manuel" : "deja en blanco lo que no use") + '</div></div><div class="lista mt8">' +
+          CUENTAS.map(function (c, i) {
+            var v = W.cuentas[p][c];
+            return '<div class="campo"><label for="c' + i + '">' + c + '</label><input id="c' + i + '" inputmode="numeric" placeholder="$ 0" data-plata data-campo="' + c + '" value="' + (v ? "$ " + miles(v) : "") + '"></div>';
+          }).join("") + '</div>';
+      } else {
+        h += '<h1 class="mt24" style="font-size: 28px">Lo guardado</h1>' +
+          '<p class="gris" style="font-size: 14px; line-height: 1.6; margin: 8px 0 0">Cuánto tiene cada uno hoy en cada bolsillo de ahorro.</p>' +
+          '<div class="bols2" style="border: 0; padding-bottom: 0"><span></span><span class="etq-s" style="text-align: right; letter-spacing: 1px">Juliana</span><span class="etq-s" style="text-align: right; letter-spacing: 1px">Manuel</span></div>' +
+          bolsillos().map(function (b, i) {
+            return '<div class="bols2"><span style="font-size: 14px">' + esc(b.nombre) + '</span>' +
+              PERSONAS.map(function (p) {
+                var v = W.bols[p][b.nombre];
+                return '<input inputmode="numeric" placeholder="$ 0" aria-label="' + esc(b.nombre) + ', ' + p + '" data-plata data-bols="' + esc(b.nombre) + '" data-persona="' + p + '" value="' + (v ? "$ " + miles(v) : "") + '">';
+              }).join("") + '</div>';
+          }).join("") +
+          '<h2 class="mincho mt32" style="font-weight: 400; font-size: 22px; margin-bottom: 0">Lo que han ganado este mes</h2>' +
+          '<p class="gris" style="font-size: 13px; line-height: 1.6; margin: 6px 0 0">Sirve para repartir las cuentas de la casa según lo que gana cada uno. Esta plata ya está en las cuentas, no se suma otra vez.</p>' +
+          '<div class="lista mt8">' + PERSONAS.map(function (p, i) {
+            var v = W.ingresos[p];
+            return '<div class="campo"><label for="i' + i + '">' + p + '</label><input id="i' + i + '" inputmode="numeric" placeholder="$ 0" data-plata data-ingreso="' + p + '" value="' + (v ? "$ " + miles(v) : "") + '"></div>';
+          }).join("") + '</div>';
+      }
+      h += '<div style="margin-top: auto; padding-top: 28px; display: flex; gap: 10px">' +
+        (W.paso > 1 ? '<button class="boton linea" style="height: 54px; width: 40%" data-a="paso" data-v="-1">Atrás</button>' : "") +
+        '<button class="boton" data-a="paso" data-v="1"' + (S.cargando ? " disabled" : "") + '>' +
+        (W.paso === 1 ? "Siguiente: Manuel" : W.paso === 2 ? "Siguiente: lo guardado" : S.cargando ? "Guardando…" : "Listo, empezar") + '</button></div>';
+      if (S.error) h += '<div class="shu mt16" style="font-size: 13px; text-align: center">' + esc(S.error) + '</div>';
+      return { html: h, nav: false };
+    }
+
+    function vInicio() {
+      var b = balance(), r = delMes(mesActual());
+      var disp = b.disp.Juliana + b.disp.Manuel, guard = b.guardado.Juliana + b.guardado.Manuel;
+      var meta = r.totalIngresos || GRUPOS.reduce(function (a, g) { return g.n === "Ahorro" ? a : a + metaGrupo(g, r); }, 0);
+      var h = '<div class="fila" style="align-items: center"><div class="sello">家計</div>' +
+        '<div style="display: flex; align-items: center; gap: 14px"><span class="etq" style="font-size: 13px; letter-spacing: 2px">' + nombreMes(mesActual()) + ' · ' + mesActual().slice(0, 4) + '</span>' +
+        '<button class="enlace" style="text-decoration: none; font-size: 18px; letter-spacing: 2px; padding: 4px 0 10px" data-a="ir" data-v="ajustes" aria-label="Ajustes">···</button></div></div>';
+      if (PEND.length || S.error) h += '<div class="shu" style="font-size: 12px; margin-top: 8px; text-align: right">' + (PEND.length ? PEND.length + " sin enviar" : "") + (S.error ? (PEND.length ? " · " : "") + S.error : "") + '</div>';
+      h += '<div class="etq" style="margin-top: 36px">Nuestro dinero</div>' +
+        '<div class="grande">' + plata(disp + guard) + '</div>' +
+        '<div class="gris" style="font-size: 13px; margin-top: 6px">disponible ' + plata(disp) + ' · guardado ' + plata(guard) + '</div>' +
+        '<div class="dos">' + PERSONAS.map(function (p) {
+          return '<div><div class="nombre">' + p + '</div>' +
+            '<div class="fila"><span class="gris">disponible</span><span>' + plata(b.disp[p]) + '</span></div>' +
+            '<div class="fila"><span class="gris">guardado</span><span>' + plata(b.guardado[p]) + '</span></div></div>';
+        }).join("") + '</div>' +
+        '<div class="etq mt24">Cuentas</div><div class="lista" style="margin-top: 4px">' +
+        CUENTAS.map(function (c) {
+          var j = b.saldo.Juliana[c], m = b.saldo.Manuel[c];
+          return '<div class="item"><div><div class="t">' + c + '</div><div class="s">' +
+            (j || m ? "Juliana " + plata(j) + " · Manuel " + plata(m) : "sin plata por ahora") + '</div></div><div class="v">' + plata(j + m) + '</div></div>';
+        }).join("") + '</div>' +
+        '<div class="mt24"><div class="fila gris" style="font-size: 12px"><span>Gastado este mes</span><span>' + plata(r.gastos) + (meta ? " de " + plata(meta) : "") + '</span></div>' +
+        '<div class="barra mt8' + (meta && r.gastos > meta ? " alto" : "") + '"><div style="width: ' + Math.min(100, pct(r.gastos, meta)) + '%"></div></div></div>';
+      var ult = todos().filter(function (m) { return m.tipo !== "Saldo inicial" && m.tipo !== "Ingreso previo"; })
+        .sort(function (a, b) { return (b.fecha + (b.anotado || "")).localeCompare(a.fecha + (a.anotado || "")); }).slice(0, 3);
+      if (ult.length) {
+        h += '<div class="fila mt32"><span class="etq">Últimos</span><button class="enlace" data-a="ir" data-v="historial">ver todos</button></div>' +
+          '<div class="lista">' + ult.map(function (m) { return filaMov(m, false); }).join("") + '</div>';
+      }
+      return { html: h, nav: "inicio" };
+    }
+
+    function vMes() {
+      var r = delMes(S.mes);
+      var h = '<div class="fila" style="align-items: center">' + selectorMes() + '<div class="gris" style="font-size: 13px">ingresos ' + plata(r.totalIngresos) + '</div></div>';
+      var pj = Math.round(r.parte.Juliana * 100);
+      h += '<div style="margin-top: 18px; display: flex; height: 3px; gap: 3px"><div style="width: ' + (r.parte.Juliana * 100).toFixed(1) + '%; background: var(--tinta)"></div><div style="flex: 1; background: var(--tinta2)"></div></div>' +
+        '<div class="fila mt8" style="font-size: 12px"><span>Juliana ' + pj + ' % · ' + plata(r.ingresos.Juliana) + '</span><span class="gris">Manuel ' + (100 - pj) + ' % · ' + plata(r.ingresos.Manuel) + '</span></div>';
+      if (!r.totalIngresos) h += '<div class="gris mt8" style="font-size: 12px">Aún no hay ingresos este mes: por ahora se reparte mitad y mitad.</div>';
+
+      h += '<div class="anillos">' + GRUPOS.slice(0, 3).map(function (g) {
+        var meta = metaGrupo(g, r), usado = r.gastoGrupo[g.n] || 0, p = pct(usado, meta);
+        var lleno = g.n !== "Ahorro" && meta > 0 && usado >= meta;
+        return '<button class="anillo' + (S.grupo === g.n ? " si" : "") + '" data-a="grupo" data-v="' + g.n + '" aria-label="' + g.n + ': ' + p + ' %">' + anillo(p, lleno) +
+          '<span class="n">' + g.n + '</span><span class="s' + (lleno ? " shu" : "") + '">' + (lleno ? (usado > meta ? "se pasó" : "al límite") : Math.round(g.p * 100) + " % · " + plata(meta)) + '</span></button>';
+      }).join("") + '</div>';
+
+      GRUPOS.slice(3).forEach(function (g) {
+        var usado = r.gastoGrupo[g.n] || 0;
+        if (usado) h += '<button class="item" style="width: 100%; background: none; border: 0; border-bottom: 1px solid var(--linea2); padding: 12px 0" data-a="grupo" data-v="' + g.n + '"><span class="t">' + g.n + '</span><span class="v">' + plata(usado) + '</span></button>';
+      });
+
+      if (S.grupo) {
+        var lista = S.grupo === "Ahorro"
+          ? bolsillos().map(function (b) { return { n: b.nombre, p: b.aporte, u: r.gastoCat[b.nombre] || 0 }; })
+          : categorias().filter(function (c) { return c.grupo === S.grupo; }).map(function (c) { return { n: c.nombre, p: c.presupuesto, u: r.gastoCat[c.nombre] || 0 }; });
+        lista = lista.filter(function (x) { return x.p || x.u; }).sort(function (a, b) { return b.u - a.u; });
+        h += '<div class="etq mt24">' + S.grupo + '</div><div class="lista mt8">' + (lista.length ? lista.map(function (x) {
+          var pasa = x.p && x.u > x.p;
+          return '<div style="padding: 10px 0; border-bottom: 1px solid var(--linea2)"><div class="fila"><span style="font-size: 14px">' + esc(x.n) + '</span>' +
+            '<span class="mincho' + (pasa ? " shu" : "") + '" style="font-size: 15px">' + plata(x.u) + (x.p ? '<span class="gris" style="font-size: 12px"> de ' + plata(x.p) + '</span>' : "") + '</span></div>' +
+            (x.p ? '<div class="barra mt8' + (pasa ? " alto" : "") + '"><div style="width: ' + Math.min(100, pct(x.u, x.p)) + '%"></div></div>' : "") + '</div>';
+        }).join("") : '<div class="vacio">Nada este mes.</div>') + '</div>';
+      }
+
+      var casa = categorias().filter(function (c) { return c.casa && c.grupo !== "Ingresos" && (c.presupuesto || r.casaCat[c.nombre]); });
+      h += '<div class="etq" style="margin-top: 28px">Cuentas de la casa</div>' +
+        '<div class="gris" style="font-size: 12px; margin-top: 4px">Cada uno pone según lo que ganó, no mitad y mitad.</div><div class="lista" style="margin-top: 4px">' +
+        (casa.length ? casa.map(function (c) {
+          var pagado = r.casaCat[c.nombre] || 0, base = pagado || c.presupuesto;
+          return '<div class="tres"><div><div style="font-size: 15px">' + esc(c.nombre) + '</div><div class="gris" style="font-size: 11px; margin-top: 2px">' +
+            (pagado ? "pagado " + plata(pagado) : "presupuesto " + plata(c.presupuesto)) + '</div></div>' +
+            PERSONAS.map(function (p) { return '<div class="d"><span class="p">' + p.toUpperCase() + '</span><span class="mincho" style="font-size: 15px">' + plata(base * r.parte[p]) + '</span></div>'; }).join("") + '</div>';
+        }).join("") : '<div class="vacio">Marca categorías "de la casa" en Ajustes.</div>') + '</div>';
+
+      if (r.casa.total) {
+        var debe = r.debe, deudor = debe > 0 ? "Manuel" : "Juliana", acreedor = debe > 0 ? "Juliana" : "Manuel";
+        h += '<div class="caja mt16">' + (Math.abs(debe) < 100
+          ? '<div class="etq-s">Cuentas claras</div><div style="font-size: 14px; margin-top: 4px">Están a paz y salvo este mes.</div>'
+          : '<div class="fila" style="align-items: center"><div><div class="etq-s">Cuentas claras</div><div style="font-size: 13px; margin-top: 4px">' + deudor + ' le pasa a ' + acreedor + '</div></div>' +
+            '<span class="mincho" style="font-size: 20px; white-space: nowrap">' + plata(Math.abs(debe)) + '</span></div>' +
+            '<button class="boton linea chico mt16" style="width: 100%" data-a="saldar" data-v="' + Math.abs(debe) + '" data-deudor="' + deudor + '">Ya se la pasó · anotar</button>') + '</div>';
+      }
+      return { html: h, nav: "mes" };
+    }
+
+    function vBolsillos() {
+      var b = balance();
+      var total = b.guardado.Juliana + b.guardado.Manuel;
+      var h = '<h1>Bolsillos</h1><div class="etq" style="margin-top: 14px">Guardado entre los dos</div>' +
+        '<div class="grande" style="font-size: 38px; margin-top: 4px">' + plata(total) + '</div>' +
+        '<div class="gris" style="font-size: 13px; margin-top: 4px">Juliana ' + plata(b.guardado.Juliana) + ' · Manuel ' + plata(b.guardado.Manuel) + '</div>' +
+        '<div class="lista" style="margin-top: 20px; border-top: 1px solid var(--linea)">' +
+        bolsillos().map(function (x) {
+          var d = b.bols[x.nombre] || { total: 0 }, p = pct(d.total, x.meta);
+          return '<div style="padding: 12px 0; border-bottom: 1px solid var(--linea2); display: flex; flex-direction: column; gap: 8px">' +
+            '<div class="fila"><span style="font-size: 15px">' + esc(x.nombre) + '</span><span class="mincho" style="font-size: 17px">' + plata(d.total) + '</span></div>' +
+            '<div class="barra"><div style="width: ' + (x.meta ? Math.min(100, p) : 0) + '%"></div></div>' +
+            '<div class="fila gris" style="font-size: 11px"><span>' + (x.meta ? "meta " + plata(x.meta) : "sin meta") +
+            (d.Juliana || d.Manuel ? " · J " + plata(d.Juliana || 0) + " · M " + plata(d.Manuel || 0) : "") + '</span><span>' + (x.meta ? (p >= 100 ? '<span class="shu">lista</span>' : p + " %") : "") + '</span></div></div>';
+        }).join("") + '</div>' +
+        '<button class="boton linea mt16" data-a="anotar" data-v="Ahorro">Mover plata a un bolsillo</button>';
+      return { html: h, nav: "bolsillos" };
+    }
+
+    function categoriasPara(tipo) {
+      if (tipo === "Ingreso") return categorias().filter(function (c) { return c.grupo === "Ingresos"; }).map(function (c) { return c.nombre; });
+      if (tipo === "Ahorro") return bolsillos().map(function (b) { return b.nombre; });
+      if (tipo === "Traslado") return [];
+      // Gastos: primero las que más usan
+      var uso = {};
+      todos().slice(-300).forEach(function (m) { if (m.tipo === "Gasto") uso[m.categoria] = (uso[m.categoria] || 0) + 1; });
+      return categorias().filter(function (c) { return c.grupo !== "Ingresos"; })
+        .sort(function (a, b) { return (uso[b.nombre] || 0) - (uso[a.nombre] || 0); }).map(function (c) { return c.nombre; });
+    }
+
+    function vAnotar() {
+      var t = A.tipo;
+      var signoT = t === "Gasto" || (t === "Ahorro" && A.sacar === false) ? "− " : t === "Ingreso" ? "+ " : "";
+      var h = '<div class="fila" style="align-items: center"><button class="x" data-a="cerrar" aria-label="Cerrar">' + ICONO_X + '</button>' +
+        '<span class="etq">Anotar</span><input type="date" aria-label="Fecha" data-a2="fecha" value="' + A.fecha + '" max="' + hoy() + '" ' +
+        'style="width: 118px; border: 0; background: transparent; font-size: 12px; color: var(--gris); text-align: right; padding: 0"></div>' +
+        '<div class="tipos">' + ["Gasto", "Ingreso", "Ahorro", "Traslado"].map(function (x) {
+          return '<button class="' + (t === x ? "si" : "") + '" data-a="tipo" data-v="' + x + '">' + x + '</button>';
+        }).join("") + '</div>' +
+        '<div class="monto">' + signoT + "$ " + miles(digitos(A.monto)) + '</div>' +
+        '<div class="gris" style="text-align: center; font-size: 12px">' + fechaBonita(A.fecha) + (A.claras ? " · cuentas claras" : "") + '</div>';
+
+      if (t === "Ahorro") h += chips(["Guardar", "Sacar"], A.sacar ? "Sacar" : "Guardar", "sacar");
+      h += '<div class="etq-s mt16">' + (t === "Traslado" ? "Desde" : "Quién") + '</div>' + chips(PERSONAS, A.quien, "quien");
+      h += '<div class="etq-s mt16">' + (t === "Traslado" ? "Cuenta de salida" : t === "Ahorro" ? (A.sacar ? "A qué cuenta" : "De qué cuenta") : "Cuenta") + '</div>' + chips(CUENTAS, A.cuenta, "cuenta", false, true);
+      if (t === "Traslado") {
+        h += '<div class="etq-s mt16">Hacia</div>' + chips(PERSONAS, A.haciaPersona, "haciaPersona") + chips(CUENTAS, A.haciaCuenta, "haciaCuenta", false, true);
+      } else {
+        h += '<div class="etq-s mt16">' + (t === "Ahorro" ? "Bolsillo" : "Categoría") + '</div>' + chips(categoriasPara(t), A.cat, "cat", true, true);
+      }
+      if (t === "Gasto") {
+        h += '<button class="interruptor mt8' + (A.casa ? " si" : "") + '" data-a="casa" aria-pressed="' + !!A.casa + '"><span>De la casa <span class="gris" style="font-size: 12px">· se reparte según lo que gana cada uno</span></span><span class="riel"></span></button>';
+      }
+      h += '<input class="texto" id="nota" style="margin-top: 4px" placeholder="Nota (opcional)" data-a2="nota" value="' + esc(A.nota) + '">' +
+        '<div class="teclado">' + ["1", "2", "3", "4", "5", "6", "7", "8", "9", "000", "0", "⌫"].map(function (k) {
+          return '<button data-a="tecla" data-v="' + k + '"' + (k === "⌫" ? ' aria-label="Borrar"' : "") + '>' + k + '</button>';
+        }).join("") + '</div>' +
+        (S.error && S.error !== "sin conexión" ? '<div class="shu" style="font-size: 13px; text-align: center; margin-top: 8px">' + esc(S.error) + '</div>' : "") +
+        '<button class="boton mt8" data-a="guardarMov">Guardar</button>';
+      return { html: h, nav: false };
+    }
+
+    function vHistorial() {
+      var lista = todos().filter(function (m) { return String(m.fecha).slice(0, 7) === S.mes; })
+        .sort(function (a, b) { return (b.fecha + (b.anotado || "")).localeCompare(a.fecha + (a.anotado || "")); });
+      var h = '<div class="fila" style="align-items: center"><button class="x" data-a="ir" data-v="inicio" aria-label="Volver">' + ICONO_X + '</button><span class="etq">Movimientos</span><span style="width: 44px"></span></div>' +
+        '<div class="mt16">' + selectorMes() + '</div>';
+      if (!lista.length) return { html: h + '<div class="vacio">No hay movimientos en ' + nombreMes(S.mes) + '.</div>', nav: "inicio" };
+      var dia = "";
+      h += '<div class="gris" style="font-size: 12px; margin-top: 4px">Toca uno para borrarlo.</div>';
+      lista.forEach(function (m) {
+        if (m.fecha !== dia) { dia = m.fecha; h += '<div class="etq-s" style="margin-top: 22px">' + fechaBonita(dia) + '</div>'; }
+        h += filaMov(m, true);
+      });
+      return { html: h, nav: "inicio" };
+    }
+
+    function vAjustes() {
+      var cats = D ? D.categorias : [], bols = D ? D.bolsillos : [];
+      var h = '<div class="fila" style="align-items: center"><button class="x" data-a="ir" data-v="inicio" aria-label="Volver">' + ICONO_X + '</button><span class="etq">Ajustes</span><span style="width: 44px"></span></div>' +
+        '<div class="etq-s mt24">En este celular eres</div>' + chips(PERSONAS, YO, "yo");
+      h += '<h2 class="mincho mt32" style="font-weight: 400; font-size: 24px; margin-bottom: 0">Presupuesto del mes</h2>' +
+        '<div class="gris" style="font-size: 12px; margin-top: 4px">Cuánto esperan gastar en cada cosa. "Casa" = se reparte según lo que gana cada uno.</div>';
+      ["Necesidades", "Gustos", "Deudas", "Inversiones", "Ingresos"].forEach(function (g) {
+        h += '<div class="etq-s mt24">' + g + '</div><div class="lista">' + cats.map(function (c, i) {
+          if (c.grupo !== g || c.activa === false) return "";
+          var quitar = '<button class="x" style="width: 32px; height: 32px; justify-content: center; flex: none" data-a="quitarCat" data-v="' + i + '" aria-label="Quitar ' + esc(c.nombre) + '">' + ICONO_QUITAR + '</button>';
+          if (g === "Ingresos") return '<div class="campo"><span style="flex: 1; font-size: 14px; padding: 6px 0">' + esc(c.nombre) + '</span>' + quitar + '</div>';
+          return '<div class="campo" style="gap: 8px"><label for="p' + i + '" style="flex: 1; font-size: 14px">' + esc(c.nombre) + '</label>' +
+            '<button class="chip' + (c.casa ? " si" : "") + '" style="height: 30px; padding: 0 10px; font-size: 12px" data-a="catCasa" data-v="' + i + '" aria-pressed="' + !!c.casa + '">casa</button>' +
+            '<input id="p' + i + '" style="width: 104px" inputmode="numeric" placeholder="$ 0" data-plata data-cat="' + i + '" value="' + (c.presupuesto ? "$ " + miles(c.presupuesto) : "") + '">' + quitar + '</div>';
+        }).join("") + '</div>';
+      });
+      h += '<div class="etq-s mt24">Nueva categoría</div><input class="texto" id="nuevaCat" placeholder="Nombre" value="' + esc(S.nuevaCat || "") + '">' +
+        chips(["Necesidades", "Gustos", "Deudas", "Inversiones", "Ingresos"], S.nuevoGrupo || "Necesidades", "nuevoGrupo");
+      h += '<h2 class="mincho mt32" style="font-weight: 400; font-size: 24px; margin-bottom: 0">Bolsillos</h2>' +
+        '<div class="bols2" style="border: 0; padding-bottom: 0; grid-template-columns: 1fr 92px 92px 32px"><span></span><span class="etq-s" style="text-align: right; letter-spacing: 1px">Meta</span><span class="etq-s" style="text-align: right; letter-spacing: 1px">Al mes</span><span></span></div>' +
+        bols.map(function (b, i) {
+          if (b.activo === false) return "";
+          return '<div class="bols2" style="grid-template-columns: 1fr 92px 92px 32px"><span style="font-size: 14px">' + esc(b.nombre) + '</span>' +
+            '<input inputmode="numeric" placeholder="$ 0" aria-label="Meta de ' + esc(b.nombre) + '" data-plata data-meta="' + i + '" value="' + (b.meta ? "$ " + miles(b.meta) : "") + '">' +
+            '<input inputmode="numeric" placeholder="$ 0" aria-label="Aporte al mes de ' + esc(b.nombre) + '" data-plata data-aporte="' + i + '" value="' + (b.aporte ? "$ " + miles(b.aporte) : "") + '">' +
+            '<button class="x" style="width: 32px; height: 32px; justify-content: center" data-a="quitarBols" data-v="' + i + '" aria-label="Quitar ' + esc(b.nombre) + '">' + ICONO_QUITAR + '</button></div>';
+        }).join("") +
+        '<input class="texto mt8" id="nuevoBols" placeholder="Nuevo bolsillo (nombre)" value="' + esc(S.nuevoBols || "") + '">';
+      var quitadas = cats.map(function (c, i) { return c.activa === false ? '<button class="chip" data-a="devolverCat" data-v="' + i + '">↺ ' + esc(c.nombre) + '</button>' : ""; }).join("") +
+        bols.map(function (b, i) { return b.activo === false ? '<button class="chip" data-a="devolverBols" data-v="' + i + '">↺ ' + esc(b.nombre) + '</button>' : ""; }).join("");
+      if (quitadas) h += '<div class="etq-s mt32">Quitadas</div><div class="gris" style="font-size: 12px; margin-top: 4px">Ya no salen en la app, pero lo anotado antes se conserva. Toca una para devolverla.</div><div class="chips">' + quitadas + '</div>';
+      h += (S.cambios ? '<div class="shu mt24" style="font-size: 13px; text-align: center">Tienes cambios sin guardar</div>' : "") +
+        '<button class="boton mt24" data-a="guardarAjustes"' + (S.cargando ? " disabled" : "") + '>' + (S.cargando ? "Guardando…" : "Guardar cambios") + '</button>' +
+        (S.error && S.error !== "sin conexión" ? '<div class="shu mt8" style="font-size: 13px; text-align: center">' + esc(S.error) + '</div>' : "") +
+        '<div style="display: flex; justify-content: space-between; margin-top: 32px">' +
+        '<button class="enlace" data-a="reiniciar">Empezar de cero otra vez</button><button class="enlace" data-a="salir">Salir</button></div>' +
+        (PRUEBA ? '<div class="gris mt16" style="font-size: 12px">Modo de prueba: todo se guarda solo en este celular.</div>' : "");
+      return { html: h, nav: false };
+    }
+
+    // ——— Pintar ———
+    function pintar() {
+      var foco = document.activeElement && document.activeElement.id;
+      var v;
+      if (!YO || (!PRUEBA && !CLAVE) || S.pantalla === "entrar") v = vEntrar();
+      else if (!D) v = { html: '<div class="cargando"><div class="sello estampa" style="margin: 0 auto">家計</div><div class="gris mt16" style="font-size: 13px">' + (S.error || "Cargando…") + '</div></div>', nav: false };
+      else if (!D.ajustes || !D.ajustes.iniciado || S.pantalla === "empezar") { if (!W) W = nuevoW(); v = vEmpezar(); }
+      else v = ({ inicio: vInicio, mes: vMes, bolsillos: vBolsillos, anotar: vAnotar, historial: vHistorial, ajustes: vAjustes }[S.pantalla] || vInicio)();
+      document.getElementById("raiz").innerHTML = '<main class="app' + (v.nav ? "" : " sin-nav") + '">' + v.html + '</main>' + (v.nav ? nav(v.nav) : "");
+      if (foco && document.getElementById(foco)) document.getElementById(foco).focus();
+    }
+
+    function avisar(txt) {
+      var c = document.getElementById("avisos");
+      c.innerHTML = '<div class="aviso" role="status"><span class="sello estampa">済</span><span>' + esc(txt) + '</span></div>';
+      clearTimeout(avisar.t);
+      avisar.t = setTimeout(function () { c.innerHTML = ""; }, 2600);
+    }
+
+    function ir(p) { S.anterior = S.pantalla === "anotar" ? S.anterior : S.pantalla; S.pantalla = p; S.borrar = ""; S.error = S.error === "sin conexión" ? S.error : ""; pintar(); window.scrollTo(0, 0); }
+
+    function nuevoW() {
+      var w = { paso: 1, cuentas: {}, bols: {}, ingresos: {} };
+      PERSONAS.forEach(function (p) { w.cuentas[p] = {}; w.bols[p] = {}; });
+      return w;
+    }
+
+    function leerPaso() {
+      var raiz = document.getElementById("raiz");
+      if (W.paso < 3) {
+        var p = PERSONAS[W.paso - 1];
+        raiz.querySelectorAll("[data-campo]").forEach(function (el) { W.cuentas[p][el.dataset.campo] = digitos(el.value); });
+      } else {
+        raiz.querySelectorAll("[data-bols]").forEach(function (el) { W.bols[el.dataset.persona][el.dataset.bols] = digitos(el.value); });
+        raiz.querySelectorAll("[data-ingreso]").forEach(function (el) { W.ingresos[el.dataset.ingreso] = digitos(el.value); });
+      }
+    }
+
+    function nuevoA(tipo) {
+      var ultima = leer("maju-cuenta") || "Nu";
+      var a = { tipo: tipo || "Gasto", sacar: false, quien: YO, cuenta: ultima, haciaPersona: YO === "Juliana" ? "Manuel" : "Juliana", haciaCuenta: "Nequi",
+        cat: "", casa: false, monto: "", fecha: hoy(), nota: "", claras: false };
+      ponerCat(a);
+      return a;
+    }
+    function ponerCat(a) {
+      var lista = categoriasPara(a.tipo);
+      a.cat = lista[0] || "";
+      var c = catDe(a.cat);
+      a.casa = a.tipo === "Gasto" && !!(c && c.casa);
+    }
+
+    // ——— Acciones ———
+    var ACC = {
+      ir: function (v) { ir(v); },
+      yo: function (v) {
+        YO = v; guardarLocal("maju-yo", v);
+        if (S.pantalla === "entrar" || !D) { var c = document.getElementById("clave"); if (c) CLAVE = c.value; }
+        pintar();
+      },
+      entrar: function () {
+        var c = document.getElementById("clave");
+        if (c) CLAVE = c.value.trim();
+        if (!YO) { S.error = "Elige quién eres."; pintar(); return; }
+        if (!PRUEBA && !CLAVE) { S.error = "Escribe la clave."; pintar(); return; }
+        S.cargando = true; S.error = ""; pintar();
+        llamar("datos").then(function (j) {
+          guardarLocal("maju-clave", CLAVE); recibir(j); S.cargando = false; S.pantalla = "inicio"; pintar();
+        }).catch(function (e) {
+          S.cargando = false; S.pantalla = "entrar";
+          S.error = e.message === "clave" ? "La clave no es correcta." : "No se pudo conectar. Revisa el internet.";
+          pintar();
+        });
+      },
+      salir: function () { salir(); pintar(); },
+      anotar: function (v) { A = nuevoA(v); S.error = S.error === "sin conexión" ? S.error : ""; ir("anotar"); },
+      cerrar: function () { ir(S.anterior || "inicio"); },
+      tipo: function (v) { A.tipo = v; A.claras = false; ponerCat(A); pintar(); },
+      sacar: function (v) { A.sacar = v === "Sacar"; pintar(); },
+      quien: function (v) { A.quien = v; if (A.tipo === "Traslado" && A.haciaPersona === v && A.haciaCuenta === A.cuenta) A.haciaCuenta = CUENTAS.filter(function (c) { return c !== A.cuenta; })[0]; pintar(); },
+      cuenta: function (v) { A.cuenta = v; pintar(); },
+      haciaPersona: function (v) { A.haciaPersona = v; pintar(); },
+      haciaCuenta: function (v) { A.haciaCuenta = v; pintar(); },
+      cat: function (v) { A.cat = v; var c = catDe(v); if (A.tipo === "Gasto") A.casa = !!(c && c.casa); pintar(); },
+      casa: function () { A.casa = !A.casa; pintar(); },
+      tecla: function (v) {
+        if (v === "⌫") A.monto = A.monto.slice(0, -1);
+        else if (A.monto.length < 10) A.monto = (A.monto + v).replace(/^0+/, "");
+        pintar();
+      },
+      guardarMov: function () {
+        var valor = digitos(A.monto);
+        if (!valor) { S.error = "Escribe cuánto fue."; pintar(); return; }
+        if (A.tipo === "Traslado" && A.quien === A.haciaPersona && A.cuenta === A.haciaCuenta) { S.error = "La cuenta de salida y la de llegada son la misma."; pintar(); return; }
+        if (A.tipo !== "Traslado" && !A.cat) { S.error = "Elige una categoría."; pintar(); return; }
+        var m = { id: nuevoId(), fecha: A.fecha || hoy(), tipo: A.tipo === "Ahorro" && A.sacar ? "Retiro ahorro" : A.tipo, persona: A.quien, cuenta: A.cuenta,
+          haciaPersona: A.tipo === "Traslado" ? A.haciaPersona : "", haciaCuenta: A.tipo === "Traslado" ? A.haciaCuenta : "",
+          categoria: A.tipo === "Traslado" ? (A.claras ? "Cuentas claras" : "") : A.cat, valor: valor, casa: A.tipo === "Gasto" && A.casa,
+          nota: A.nota.trim(), anoto: YO, anotado: new Date().toISOString() };
+        PEND.push(m); guardarLocal("maju-pendientes", PEND);
+        if (A.quien === YO) guardarLocal("maju-cuenta", A.cuenta);
+        var txt = "Anotado · " + (m.categoria || "Traslado") + " · $ " + miles(valor);
+        S.error = "";
+        ir(S.anterior || "inicio");
+        avisar(txt);
+        sincronizar();
+      },
+      mes: function (v) { S.mes = moverMes(S.mes, Number(v)); S.grupo = ""; pintar(); },
+      grupo: function (v) { S.grupo = S.grupo === v ? "" : v; pintar(); },
+      saldar: function (v, el) {
+        A = nuevoA("Traslado");
+        A.quien = el.dataset.deudor; A.haciaPersona = el.dataset.deudor === "Manuel" ? "Juliana" : "Manuel";
+        A.monto = String(v); A.claras = true; A.nota = "Cuentas claras de " + nombreMes(S.mes);
+        ir("anotar");
+      },
+      tocarMov: function (v) { S.borrar = S.borrar === v ? "" : v; pintar(); },
+      noBorrar: function () { S.borrar = ""; pintar(); },
+      borrar: function (v) {
+        S.borrar = "";
+        if (PEND.some(function (m) { return m.id === v; })) {
+          PEND = PEND.filter(function (m) { return m.id !== v; }); guardarLocal("maju-pendientes", PEND); pintar(); avisar("Borrado"); return;
+        }
+        D.movimientos = D.movimientos.filter(function (m) { return m.id !== v; }); pintar();
+        llamar("borrar", { id: v }).then(function (j) { recibir(j); pintar(); avisar("Borrado"); })
+          .catch(function () { S.error = "No se pudo borrar (sin conexión)."; sincronizar(); });
+      },
+      paso: function (v) {
+        leerPaso();
+        S.error = "";
+        if (Number(v) < 0) { W.paso--; pintar(); return; }
+        if (W.paso < 3) { W.paso++; pintar(); window.scrollTo(0, 0); return; }
+        var f = hoy(), movs = [];
+        PERSONAS.forEach(function (p) {
+          CUENTAS.forEach(function (c) { if (W.cuentas[p][c]) movs.push({ tipo: "Saldo inicial", persona: p, cuenta: c, valor: W.cuentas[p][c] }); });
+          Object.keys(W.bols[p]).forEach(function (b) { if (W.bols[p][b]) movs.push({ tipo: "Saldo inicial", persona: p, cuenta: "", categoria: b, valor: W.bols[p][b] }); });
+          if (W.ingresos[p]) movs.push({ tipo: "Ingreso previo", persona: p, categoria: "Sueldo", valor: W.ingresos[p] });
+        });
+        movs.forEach(function (m) { m.id = nuevoId(); m.fecha = f; m.anoto = YO; m.anotado = new Date().toISOString(); });
+        S.cargando = true; pintar();
+        llamar("empezar", { movimientos: movs }).then(function (j) {
+          PEND = []; recibir(j); W = null; S.cargando = false; S.pantalla = "inicio"; pintar(); avisar("Listo. Desde hoy, todo en orden.");
+        }).catch(function () { S.cargando = false; S.error = "No se pudo guardar. Revisa el internet e intenta otra vez."; pintar(); });
+      },
+      reiniciar: function () {
+        if (!confirm("¿Empezar de cero otra vez? Lo anotado hasta hoy queda guardado aparte en la hoja de Google, pero la app arranca con saldos nuevos.")) return;
+        W = nuevoW(); S.pantalla = "empezar"; pintar(); window.scrollTo(0, 0);
+      },
+      catCasa: function (v) { leerAjustes(); D.categorias[Number(v)].casa = !D.categorias[Number(v)].casa; S.cambios = true; pintar(); },
+      quitarCat: function (v) { leerAjustes(); D.categorias[Number(v)].activa = false; S.cambios = true; pintar(); },
+      devolverCat: function (v) { leerAjustes(); D.categorias[Number(v)].activa = true; S.cambios = true; pintar(); },
+      quitarBols: function (v) {
+        leerAjustes();
+        var b = D.bolsillos[Number(v)], hay = (balance().bols[b.nombre] || { total: 0 }).total;
+        if (hay > 0 && !confirm(b.nombre + " todavía tiene " + plata(hay) + ". Si lo quitas, esa plata sigue contando en lo guardado pero ya no se ve el bolsillo. Mejor sácala primero (Anotar → Ahorro → Sacar). ¿Quitarlo igual?")) return;
+        b.activo = false; S.cambios = true; pintar();
+      },
+      devolverBols: function (v) { leerAjustes(); D.bolsillos[Number(v)].activo = true; S.cambios = true; pintar(); },
+      nuevoGrupo: function (v) { leerAjustes(); S.nuevoGrupo = v; pintar(); },
+      guardarAjustes: function () {
+        leerAjustes();
+        var nc = (S.nuevaCat || "").trim(), nb = (S.nuevoBols || "").trim();
+        if (nc) D.categorias.push({ nombre: nc, grupo: S.nuevoGrupo || "Necesidades", presupuesto: 0, casa: false, activa: true });
+        if (nb) D.bolsillos.push({ nombre: nb, meta: 0, aporte: 0, activo: true });
+        S.cargando = true; S.error = ""; pintar();
+        llamar("guardarCategorias", { categorias: D.categorias })
+          .then(function () { return llamar("guardarBolsillos", { bolsillos: D.bolsillos }); })
+          .then(function (j) { recibir(j); S.cargando = false; S.cambios = false; S.nuevaCat = ""; S.nuevoBols = ""; pintar(); avisar("Cambios guardados"); })
+          .catch(function () { S.cargando = false; S.error = "No se pudo guardar. Revisa el internet."; pintar(); });
+      }
+    };
+
+    // Lo escrito en Ajustes se guarda en D antes de volver a pintar, para no perderlo
+    function leerAjustes() {
+      var raiz = document.getElementById("raiz");
+      raiz.querySelectorAll("[data-cat]").forEach(function (el) { D.categorias[Number(el.dataset.cat)].presupuesto = digitos(el.value); });
+      raiz.querySelectorAll("[data-meta]").forEach(function (el) { D.bolsillos[Number(el.dataset.meta)].meta = digitos(el.value); });
+      raiz.querySelectorAll("[data-aporte]").forEach(function (el) { D.bolsillos[Number(el.dataset.aporte)].aporte = digitos(el.value); });
+      var nc = document.getElementById("nuevaCat"), nb = document.getElementById("nuevoBols");
+      if (nc) S.nuevaCat = nc.value;
+      if (nb) S.nuevoBols = nb.value;
+    }
+
+    function salir() {
+      CLAVE = ""; D = null; PEND = PEND || [];
+      try { localStorage.removeItem("maju-clave"); localStorage.removeItem("maju-datos"); } catch (e) {}
+      S.pantalla = "entrar";
+    }
+
+    document.addEventListener("click", function (e) {
+      var b = e.target.closest("[data-a]");
+      if (!b || !ACC[b.dataset.a]) return;
+      ACC[b.dataset.a](b.dataset.v, b);
+    });
+    document.addEventListener("input", function (e) {
+      var el = e.target;
+      if (el.hasAttribute("data-plata")) { var n = digitos(el.value); el.value = n ? "$ " + miles(n) : ""; }
+      if (el.dataset.a2 === "nota" && A) A.nota = el.value;
+    });
+    document.addEventListener("change", function (e) {
+      if (e.target.dataset.a2 === "fecha" && A) { A.fecha = e.target.value || hoy(); pintar(); }
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && e.target.id === "clave") ACC.entrar();
+    });
+    window.addEventListener("online", function () { if (D) sincronizar(); });
+    document.addEventListener("visibilitychange", function () { if (!document.hidden && D && (PRUEBA || CLAVE)) sincronizar(); });
+
+    pintar();
+    if (YO && (PRUEBA || CLAVE)) sincronizar();
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function () {});
+  </script>
+</body>
+</html>

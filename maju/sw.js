@@ -1,6 +1,6 @@
 // Permite instalar la app en el celular y abrirla aunque el internet esté lento.
 // Siempre intenta traer la versión nueva; si no hay conexión, usa la última guardada.
-const CACHE = "maju-v1";
+const CACHE = "maju-v2";
 
 self.addEventListener("install", (e) => {
   self.skipWaiting();

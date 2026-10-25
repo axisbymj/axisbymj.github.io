@@ -611,7 +611,7 @@
       var cambios = cambiosResortes(C.pasos), falta = R.MINUTOS - C.minutos;
       $("detalleClase").textContent = bonita(op.fecha) + " · " + (op.circuito ? "Circuito: " : "") + op.maquinas.join(" → ") + " · " + op.nivel +
         (op.manual ? " · armada a mano" : "") + " · 🔩 " + (cambios === 1 ? "1 cambio" : cambios + " cambios") + " de resortes" +
-        (op.manual && falta > 0 ? " · faltan " + falta + " min para " + R.MINUTOS : "");
+        (falta > 0 ? " · faltan " + falta + " min para " + R.MINUTOS : falta < 0 ? " · " + -falta + " min de más" : "");
       $("minutosClase").textContent = C.minutos;
       $("pasos").innerHTML = htmlPasos(C, null, true);
       $("sortear").textContent = op.manual ? "✨ Que la app la arme" : "🎲 Sortear otra";
@@ -696,7 +696,7 @@
           if (s === "E") marcas += '<span class="pildora rojo">✕ ' + esc(nombreAlumna(i, op)) + "</span>";
         });
         return '<button class="item" data-elegir="' + esc(e.id) + '"><span class="info"><b>' + esc(e.nombre) + "</b><small>" +
-          esc([op.maquinas.length > 1 ? e.maquina : "", e.equipo, e.nivel, E.fase === "Todas" ? e.fase : "", e.minutos + " min"].filter(Boolean).join(" · ")) + marcas + "</small>" +
+          esc([op.maquinas.length > 1 ? e.maquina : "", e.equipo, e.nivel, E.fase === "Todas" ? e.fase : "", e.incluye ? "Serie de " + e.incluye.split("·").filter(function (x) { return x.trim(); }).length : ""].filter(Boolean).join(" · ")) + marcas + "</small>" +
           (e.resortes ? '<small class="res">🔩 ' + esc(e.resortes) + (k && puestos[k] ? ' <span class="pildora gris">ya puestos</span>' : "") + "</small>" : "") +
           '</span><span class="mas">' + (E.viejo ? "↻" : "＋") + "</span></button>";
       }).join("") : '<p class="vacio" style="padding:12px 0">No hay ejercicios con ese filtro.</p>';
@@ -803,7 +803,7 @@
       if (rep) rep.onclick = function () {
         var op = JSON.parse(JSON.stringify(c.detalle.opciones));
         op.fecha = hoyISO(); op.hoy = op.fecha;
-        C = { opciones: op, pasos: JSON.parse(JSON.stringify(c.detalle.pasos)), minutos: c.minutos };
+        C = R.ajustar({ opciones: op, pasos: JSON.parse(JSON.stringify(c.detalle.pasos)) }, D.ejercicios);
         guardar("axis-pil-borrador", C); cerrarHoja(); pintarClase(); ir("armar");
       };
       $("borrarClase").onclick = function () {

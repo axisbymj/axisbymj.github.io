@@ -7,11 +7,19 @@
   var NIVELES = { "Básico": 0, "Intermedio": 1, "Avanzado": 2 };
   var POSICIONES = ["Supino", "Sentado", "Lateral", "Prono", "Cuatro apoyos", "Arrodillado", "De pie"];
   var MINUTOS = 50;
-  var REPARTO = { Calentamiento: 8, Cierre: 7 }; // lo demás es parte principal
+  // Estructura de la clase: calentamiento 5 ejercicios (10 min) y cierre 1 (5 min), con su tiempo repartido entre ellos.
+  // Parte principal = 35 min por tiempo de ejercicio: cada ejercicio dura lo mismo, también cada uno de los que van
+  // dentro de una serie. Base = clase de Juliana del 24-oct: Arm series (6 adentro) + Standing leg series (3)
+  // + 3 ejercicios = 12 ejercicios en 35 min → unos 2,9 min cada uno.
+  var CANTIDAD = { Calentamiento: 5, Cierre: 1 };
+  var TIEMPO = { Calentamiento: 10, Principal: 35, Cierre: 5 };
+  var POR_EJERCICIO = 35 / 12;
 
   function activo(ej) { return String(ej.activo || "Sí").trim().toLowerCase() !== "no"; }
   function nivelDe(ej) { var n = NIVELES[ej.nivel]; return n === undefined ? 0 : n; }
-  function minutosDe(ej) { return Math.max(1, Number(ej.minutos) || 3); }
+  function esSerie(ej) { return !!String((ej && ej.incluye) || "").trim(); }
+  // cuántos ejercicios son: 1, o los que trae adentro si es una serie
+  function cuantos(ej) { return esSerie(ej) ? Math.max(1, String(ej.incluye).split("·").filter(function (x) { return x.trim(); }).length) : 1; }
 
   // Cómo le cae un ejercicio a una estudiante según sus zonas con molestia: E (evitar) > A (adaptar) > S (sirve)
   function estadoPara(ej, zonas) {
@@ -109,30 +117,40 @@
     return w;
   };
 
-  // Llena una fase hasta su tiempo con ejercicios de ciertas máquinas
-  Armador.prototype.llenar = function (fase, maquinas, minutos, usados) {
-    var self = this, elegidos = [], suma = 0;
+  // Elige cierta cantidad de ejercicios de una fase y de ciertas máquinas.
+  // En la parte principal la cantidad cuenta también los ejercicios de adentro de cada serie.
+  Armador.prototype.elegir = function (fase, maquinas, cantidad, usados) {
+    var self = this, elegidos = [], lleva = 0;
+    var medida = function (ej) { return fase === "Principal" ? cuantos(ej) : 1; };
     var deFase = function (f) {
       return self.pool.filter(function (ej) { return ej.fase === f && maquinas.indexOf(ej.maquina) >= 0 && !usados[ej.id]; });
     };
     var fuentes = [deFase(fase)];
     // si una máquina tiene pocos ejercicios de calentamiento o cierre, se completa con ejercicios suaves de la parte principal
-    if (fase !== "Principal") fuentes.push(deFase("Principal").filter(function (ej) { return nivelDe(ej) === 0; }), deFase("Principal"));
-    for (var f = 0; f < fuentes.length && suma < minutos - 1; f++) {
+    // (sin sus series, que son largas)
+    if (fase !== "Principal") {
+      fuentes.push(deFase("Principal").filter(function (ej) { return nivelDe(ej) === 0 && !esSerie(ej); }),
+        deFase("Principal").filter(function (ej) { return !esSerie(ej); }));
+    }
+    // que quepa en lo que falta; en calentamiento y cierre, máximo 2 series (p. ej. footwork)
+    var cabe = function (x) {
+      if (usados[x.id] || medida(x) > cantidad - lleva) return false;
+      return fase === "Principal" || !esSerie(x) || elegidos.filter(esSerie).length < 2;
+    };
+    for (var f = 0; f < fuentes.length && lleva < cantidad; f++) {
       var lista = fuentes[f];
-      while (suma < minutos - 1) {
-        var falta = minutos - suma;
-        var caben = lista.filter(function (ej) { return !usados[ej.id] && minutosDe(ej) <= falta + 1; });
-        var ej = sorteo(caben, function (x) {
-          // variar: menos probable repetir el mismo tipo de movimiento dentro de la misma parte
+      while (lleva < cantidad) {
+        var ej = sorteo(lista.filter(cabe), function (x) {
+          // variar: menos probable repetir el mismo tipo de movimiento (o la misma máquina) dentro de la misma parte
           var repetidos = elegidos.filter(function (e) { return e.movimiento === x.movimiento; }).length;
-          return self.peso(x) * Math.pow(0.5, repetidos) * (self.montajes[claveResortes(x)] ? 2.5 : 1);
+          var mismaMaq = maquinas.length > 1 ? elegidos.filter(function (e) { return e.maquina === x.maquina; }).length : 0;
+          return self.peso(x) * Math.pow(0.5, repetidos) * Math.pow(0.3, mismaMaq) * (self.montajes[claveResortes(x)] ? 2.5 : 1);
         }, self.azar);
         if (!ej) break;
         usados[ej.id] = true;
         if (claveResortes(ej)) self.montajes[claveResortes(ej)] = true;
         elegidos.push(ej);
-        suma += minutosDe(ej);
+        lleva += medida(ej);
       }
     }
     return elegidos;
@@ -173,7 +191,7 @@
 
   Armador.prototype.paso = function (ej, usados) {
     var self = this;
-    var p = { id: ej.id, fase: ej.fase, maquina: ej.maquina, minutos: minutosDe(ej) };
+    var p = { id: ej.id, fase: ej.fase, maquina: ej.maquina, serie: esSerie(ej), cuantos: cuantos(ej), minutos: 0 };
     p.alumnas = this.estados(ej).map(function (s, i) {
       var a = { estado: s.estado, zonas: s.zonas };
       if (s.estado === "E") {
@@ -218,20 +236,30 @@
   function armar(ejercicios, op, historial, azar) {
     var A = new Armador(ejercicios, op, historial, azar);
     var maquinas = (op.maquinas || []).slice();
-    var usados = {}, total = op.minutos || MINUTOS;
-    var cal = A.llenar("Calentamiento", maquinas.length > 1 ? [maquinas[0]] : maquinas, REPARTO.Calentamiento, usados);
-    if (!cal.length) cal = A.llenar("Calentamiento", maquinas, REPARTO.Calentamiento, usados);
-    var cie = A.llenar("Cierre", maquinas.length > 1 ? [maquinas[maquinas.length - 1]] : maquinas, REPARTO.Cierre, usados);
-    if (!cie.length) cie = A.llenar("Cierre", maquinas, REPARTO.Cierre, usados);
-    var suma = function (l) { return l.reduce(function (t, e) { return t + minutosDe(e); }, 0); };
-    var principal = [], resto = total - suma(cal) - suma(cie);
-    cal = ordenar(cal, maquinas);
-    // circuito: la parte principal se reparte entre todas las máquinas, en bloques
-    maquinas.forEach(function (m, i) {
-      var meta = Math.round(resto * (i + 1) / maquinas.length) - suma(principal);
-      principal = principal.concat(A.llenar("Principal", [m], meta, usados));
-    });
-    if (suma(principal) < resto - 1) principal = principal.concat(A.llenar("Principal", maquinas, resto - suma(principal), usados));
+    var usados = {};
+    // parte principal (va primero para que el calentamiento no le gaste los ejercicios): se llena hasta 35 min
+    // contando cada ejercicio (y cada uno de los de adentro de una serie) a 2,9 min
+    var principal = [], meta = Math.round(TIEMPO.Principal / POR_EJERCICIO);
+    var lleva = function () { return principal.reduce(function (t, e) { return t + cuantos(e); }, 0); };
+    // circuito: primero un ejercicio de cada máquina, y lo demás repartido entre todas
+    if (maquinas.length > 1) maquinas.forEach(function (m) { if (lleva() < meta) principal = principal.concat(A.elegir("Principal", [m], 1, usados)); });
+    principal = principal.concat(A.elegir("Principal", maquinas, meta - lleva(), usados));
+    // si la máquina no tiene suficientes ejercicios del nivel, cada uno lleva un poco más de tiempo (más
+    // repeticiones), hasta 1.6 veces lo normal
+    op.estirar = principal.length && lleva() < meta ? Math.min(1.6, meta / lleva()) : 0;
+    // en circuito el calentamiento va en la primera máquina y el cierre en la última
+    var parte = function (fase, maquina) {
+      var l = A.elegir(fase, maquinas.length > 1 ? [maquina] : maquinas, CANTIDAD[fase], usados);
+      if (l.length < CANTIDAD[fase]) l = l.concat(A.elegir(fase, maquinas, CANTIDAD[fase] - l.length, usados));
+      if (!l.length) { // la máquina no tiene ninguno de esa parte: uno de Mat en el piso, al lado de la máquina
+        var mat = A.todos.filter(function (x) { return x.maquina === "Mat" && x.fase === fase && !usados[x.id] && !esSerie(x); });
+        var ej = sorteo(mat, function (x) { return A.peso(x); }, A.azar);
+        if (ej) { usados[ej.id] = true; l = [ej]; }
+      }
+      return l;
+    };
+    var cal = ordenar(parte("Calentamiento", maquinas[0]), maquinas);
+    var cie = parte("Cierre", maquinas[maquinas.length - 1]);
     // el calentamiento termina con unos resortes que también use la parte principal, para seguir sin cambiarlos
     var enPrincipal = {};
     principal.forEach(function (e) { if (claveResortes(e)) enPrincipal[claveResortes(e)] = true; });
@@ -245,26 +273,28 @@
       // la parte en la que se eligió (un ejercicio de la parte principal puede completar el cierre)
       parte[0].forEach(function (ej) { var p = A.paso(ej, usados); p.fase = parte[1]; pasos.push(p); });
     });
-    return ajustar({ opciones: op, pasos: pasos }, total);
+    return ajustar({ opciones: op, pasos: pasos });
   }
 
-  // Si con los ejercicios que hay no se llega a los 50 minutos (máquinas con pocos ejercicios del nivel),
-  // se les da un poco más de tiempo (más repeticiones), hasta 1.6 veces lo normal.
-  // En una clase armada a mano no se estiran los tiempos: cada ejercicio queda con sus minutos.
-  function ajustar(clase, total) {
-    var base = 0;
-    clase.pasos.forEach(function (p) { p.base = p.base || p.minutos; p.minutos = p.base; base += p.base; });
-    if (base && base < total - 1 && !clase.opciones.manual) {
-      var factor = Math.min(1.6, total / base), suma = 0;
-      clase.pasos.forEach(function (p) { p.minutos = Math.round(p.base * factor); suma += p.minutos; });
-      var meta = Math.min(total, Math.floor(base * 1.6));
-      var principales = clase.pasos.filter(function (p) { return p.fase === "Principal"; });
-      for (var i = 0; suma < meta && principales.length && i < 100; i++) { principales[i % principales.length].minutos++; suma++; }
-      for (var j = 0; suma > total && principales.length && j < 100; j++) {
-        var p = principales[j % principales.length];
-        if (p.minutos > p.base) { p.minutos--; suma--; }
-      }
-    }
+  // Minutos de cada ejercicio. Calentamiento y cierre: su tiempo (10 y 5 min) repartido entre sus ejercicios.
+  // Parte principal: 2,9 min por ejercicio (una serie, 2,9 por cada uno de los que trae adentro), así que si se
+  // agregan o quitan ejercicios la clase dura más o menos, y en una clase armada a mano se ve cuánto falta.
+  function ajustar(clase, ejercicios) {
+    var escala = (clase.opciones.minutos || MINUTOS) / MINUTOS;
+    FASES.forEach(function (fase) {
+      var pasos = clase.pasos.filter(function (p) { return p.fase === fase; });
+      if (!pasos.length) return;
+      if (ejercicios) pasos.forEach(function (p) { var ej = buscarEj(ejercicios, p.id); if (ej) { p.serie = esSerie(ej); p.cuantos = cuantos(ej); } });
+      var exacto = fase === "Principal"
+        ? pasos.map(function (p) { return (p.cuantos || 1) * POR_EJERCICIO * escala * (clase.opciones.estirar || 1); })
+        : pasos.map(function () { return TIEMPO[fase] * escala / pasos.length; });
+      var total = Math.round(exacto.reduce(function (t, v) { return t + v; }, 0));
+      // reparto exacto: cada uno su parte redondeada hacia abajo y los minutos sobrantes a los de mayor fracción
+      var partes = exacto.map(function (v, i) { return { i: i, min: Math.floor(v), resto: v % 1 }; });
+      var sobra = total - partes.reduce(function (t, x) { return t + x.min; }, 0);
+      partes.slice().sort(function (a, b) { return b.resto - a.resto || a.i - b.i; }).slice(0, sobra).forEach(function (x) { x.min++; });
+      partes.forEach(function (x) { pasos[x.i].minutos = Math.max(1, x.min); delete pasos[x.i].base; });
+    });
     clase.minutos = clase.pasos.reduce(function (t, p) { return t + p.minutos; }, 0);
     return clase;
   }
@@ -274,7 +304,8 @@
     var op = clase.opciones, A = new Armador(ejercicios, op, historial, azar);
     var usados = usadosEn(clase);
     var viejo = clase.pasos[indice];
-    var actual = ejercicios.filter(function (e) { return e.id === viejo.id; })[0] || { minutos: viejo.minutos };
+    var actual = ejercicios.filter(function (e) { return e.id === viejo.id; })[0] || {};
+    var tam = viejo.fase === "Principal" ? (actual.id ? cuantos(actual) : viejo.cuantos || 1) : 1;
     var buscar = function (misma) {
       return A.pool.filter(function (e) {
         return !usados[e.id] && e.fase === viejo.fase && (!misma || e.maquina === viejo.maquina);
@@ -282,15 +313,17 @@
     };
     var lista = buscar(true);
     if (!lista.length) lista = buscar(false);
-    var dif = function (e) { return Math.abs(minutosDe(e) - minutosDe(actual)); };
     var nuevo = sorteo(lista, function (e) {
-      return A.peso(e) / (1 + dif(e)) * (1 + 2 * parecido(claveResortes(actual), claveResortes(e))); // mejor si no hay que tocar los resortes
+      // mejor uno que dure parecido (en la principal, una serie con tantos ejercicios como la otra), y si no hay que tocar los resortes
+      var dif = viejo.fase === "Principal" ? Math.abs(cuantos(e) - tam) : 0;
+      return A.peso(e) / (1 + dif) * (1 + 2 * parecido(claveResortes(actual), claveResortes(e)));
     }, A.azar);
     if (!nuevo) return null;
     var pasos = copiar(clase.pasos);
     usados[nuevo.id] = true;
     pasos[indice] = A.paso(nuevo, usados);
-    return ajustar({ opciones: op, pasos: pasos }, op.minutos || MINUTOS);
+    pasos[indice].fase = viejo.fase;
+    return ajustar({ opciones: op, pasos: pasos }, ejercicios);
   }
 
   // ——— Cambios a mano sobre una clase ya armada ———
@@ -328,7 +361,7 @@
     p.fase = fase || ej.fase;
     var pasos = copiar(clase.pasos);
     pasos.splice(lugar(ejercicios, pasos, p, op.maquinas || []), 0, p);
-    return ajustar({ opciones: op, pasos: pasos }, op.minutos || MINUTOS);
+    return ajustar({ opciones: op, pasos: pasos }, ejercicios);
   }
 
   function reemplazar(ejercicios, clase, indice, id, historial) {
@@ -341,19 +374,19 @@
     var p = A.paso(ej, usados);
     p.fase = pasos[indice].fase;
     pasos[indice] = p;
-    return ajustar({ opciones: op, pasos: pasos }, op.minutos || MINUTOS);
+    return ajustar({ opciones: op, pasos: pasos }, ejercicios);
   }
 
   function quitar(clase, indice) {
     var pasos = copiar(clase.pasos);
     pasos.splice(indice, 1);
-    return ajustar({ opciones: clase.opciones, pasos: pasos }, clase.opciones.minutos || MINUTOS);
+    return ajustar({ opciones: clase.opciones, pasos: pasos });
   }
 
   var api = {
     ZONAS: ZONAS, MAQUINAS: MAQUINAS, FASES: FASES, NIVELES: NIVELES, POSICIONES: POSICIONES, MINUTOS: MINUTOS,
     estadoPara: estadoPara, armar: armar, cambiar: cambiar, agregar: agregar, reemplazar: reemplazar, quitar: quitar,
-    claveResortes: claveResortes, normalizar: normalizar,
+    claveResortes: claveResortes, normalizar: normalizar, ajustar: ajustar,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else raiz.Rutina = api;

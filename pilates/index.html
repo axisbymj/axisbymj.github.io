@@ -362,7 +362,19 @@
     function iso(d) { return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2); }
     function hoyISO() { return iso(new Date()); }
     function deISO(t) { var p = String(t).split("-").map(Number); return new Date(p[0], p[1] - 1, p[2]); }
-    function bonita(t) { var d = deISO(t); return DIAS[d.getDay()] + " " + d.getDate() + " " + MESES[d.getMonth()]; }
+    function bonita(t) { var d = deISO(t); return isNaN(d) ? String(t || "Sin fecha") : DIAS[d.getDay()] + " " + d.getDate() + " " + MESES[d.getMonth()]; }
+    // Fechas que llegan en otra forma (la hoja la guardó como texto en inglés: "Sat Oct 24"): se pasan a "2026-10-24".
+    // El año sale del ID de la clase (C + año, mes y día en que se guardó).
+    var MESES_EN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    function arreglarFechas(clases) {
+      (clases || []).forEach(function (c) {
+        var f = String(c.fecha || "");
+        if (/^\d{4}-\d{2}-\d{2}$/.test(f)) return;
+        var m = f.match(/([A-Za-z]{3}) (\d{1,2})(?: (\d{4}))?/), anio = /^C\d{6}/.test(c.id) ? "20" + c.id.slice(1, 3) : String(new Date().getFullYear());
+        if (m && MESES_EN.indexOf(m[1]) >= 0) c.fecha = (m[3] || anio) + "-" + ("0" + (MESES_EN.indexOf(m[1]) + 1)).slice(-2) + "-" + ("0" + m[2]).slice(-2);
+      });
+      return clases;
+    }
 
     // ——— Hablar con la hoja de Google ———
     function api(accion, extra) {
@@ -376,7 +388,7 @@
             e.clave = r.error === "clave";
             throw e;
           }
-          D.ejercicios = r.ejercicios; D.clases = r.clases;
+          D.ejercicios = r.ejercicios; D.clases = arreglarFechas(r.clases);
           guardar("axis-pil-datos", D);
           return r;
         });
@@ -976,7 +988,7 @@
 
     if (PRUEBA || sesion.clave) {
       var guardados = leer("axis-pil-datos");
-      if (guardados && !PRUEBA) D = guardados;
+      if (guardados && !PRUEBA) { D = guardados; arreglarFechas(D.clases); }
       mostrarApp();
       if (D.ejercicios.length) pintarTodo();
       cargar(true);

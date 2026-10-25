@@ -216,12 +216,18 @@
       if (accion === "borrar") B.movimientos = B.movimientos.filter(function (m) { return m.id !== c.id; });
       if (accion === "guardarCategorias") B.categorias = c.categorias;
       if (accion === "guardarBolsillos") B.bolsillos = c.bolsillos;
+      B.presupuestos = B.presupuestos || [];
+      if (accion === "guardarPresupuesto") {
+        B.presupuestos = B.presupuestos.filter(function (p) { return p.mes !== c.mes; })
+          .concat([{ mes: c.mes, tipo: "Listo", nombre: "", valor: 0 }])
+          .concat(c.items.filter(function (i) { return i.valor > 0; }).map(function (i) { return { mes: c.mes, tipo: i.tipo, nombre: i.nombre, valor: i.valor }; }));
+      }
       guardarLocal("maju-prueba", B);
       return JSON.parse(JSON.stringify(Object.assign({ ok: true }, B)));
     }
 
     function recibir(j) {
-      D = { movimientos: j.movimientos || [], categorias: j.categorias || [], bolsillos: j.bolsillos || [], ajustes: j.ajustes || {} };
+      D = { movimientos: j.movimientos || [], categorias: j.categorias || [], bolsillos: j.bolsillos || [], presupuestos: j.presupuestos || [], ajustes: j.ajustes || {} };
       var ya = {};
       D.movimientos.forEach(function (m) { ya[m.id] = true; });
       PEND = PEND.filter(function (m) { return !ya[m.id]; });
@@ -300,10 +306,24 @@
       return r;
     }
 
-    function metaGrupo(g, r) {
+    // Presupuesto de un mes. Si ese mes no se ha armado, sirve el último mes anterior que sí (origen dice cuál).
+    function presupuestoMes(mes) {
+      var lista = D && D.presupuestos ? D.presupuestos : [];
+      var origen = "";
+      lista.forEach(function (p) { if (p.mes <= mes && p.mes > origen) origen = p.mes; });
+      var r = { mes: mes, origen: origen, cat: {}, bols: {}, total: 0 };
+      lista.forEach(function (p) {
+        if (p.mes !== origen || !p.valor) return;
+        if (p.tipo === "Bolsillo") r.bols[p.nombre] = p.valor; else r.cat[p.nombre] = p.valor;
+        r.total += p.valor;
+      });
+      return r;
+    }
+
+    function metaGrupo(g, r, P) {
       if (r.totalIngresos) return Math.round(g.p * r.totalIngresos);
-      if (g.n === "Ahorro") return bolsillos().reduce(function (a, b) { return a + (b.aporte || 0); }, 0);
-      return categorias().filter(function (c) { return c.grupo === g.n; }).reduce(function (a, c) { return a + (c.presupuesto || 0); }, 0);
+      if (g.n === "Ahorro") return bolsillos().reduce(function (a, b) { return a + (P.bols[b.nombre] || 0); }, 0);
+      return categorias().filter(function (c) { return c.grupo === g.n; }).reduce(function (a, c) { return a + (P.cat[c.nombre] || 0); }, 0);
     }
 
     // ——— Piezas ———
@@ -336,7 +356,9 @@
     function selectorMes() {
       return '<div class="mes-sel"><button data-a="mes" data-v="-1" aria-label="Mes anterior">‹</button>' +
         '<h1 style="text-transform: capitalize">' + nombreMes(S.mes) + '</h1>' +
-        (S.mes < mesActual() ? '<button data-a="mes" data-v="1" aria-label="Mes siguiente">›</button>' : '<span style="width: 36px"></span>') + '</div>';
+        '<span class="gris mincho" style="font-size: 18px; margin-left: 8px; margin-top: 6px">' + S.mes.slice(0, 4) + '</span>' +
+        '<button data-a="mes" data-v="1" aria-label="Mes siguiente">›</button>' +
+        (S.mes !== mesActual() ? '<button class="enlace" style="width: auto; font-size: 12px" data-a="mesHoy">hoy</button>' : "") + '</div>';
     }
 
     function describe(m) {
@@ -426,7 +448,8 @@
     function vInicio() {
       var b = balance(), r = delMes(mesActual());
       var tiene = b.tiene.Juliana + b.tiene.Manuel, disp = b.disp.Juliana + b.disp.Manuel, guard = b.guardado.Juliana + b.guardado.Manuel;
-      var meta = r.totalIngresos || GRUPOS.reduce(function (a, g) { return g.n === "Ahorro" ? a : a + metaGrupo(g, r); }, 0);
+      var P = presupuestoMes(mesActual());
+      var meta = r.totalIngresos || GRUPOS.reduce(function (a, g) { return g.n === "Ahorro" ? a : a + metaGrupo(g, r, P); }, 0);
       var h = '<div class="fila" style="align-items: center"><div class="sello">家計</div>' +
         '<div style="display: flex; align-items: center; gap: 14px"><span class="etq" style="font-size: 13px; letter-spacing: 2px">' + nombreMes(mesActual()) + ' · ' + mesActual().slice(0, 4) + '</span>' +
         '<button class="enlace" style="text-decoration: none; font-size: 18px; letter-spacing: 2px; padding: 4px 0 10px" data-a="ir" data-v="ajustes" aria-label="Ajustes">···</button></div></div>';
@@ -458,25 +481,28 @@
     }
 
     function vMes() {
-      var r = delMes(S.mes);
-      var h = '<div class="fila" style="align-items: center">' + selectorMes() + '<div class="gris" style="font-size: 13px">ingresos ' + plata(r.totalIngresos) + '</div></div>';
+      var r = delMes(S.mes), P = presupuestoMes(S.mes);
+      var h = selectorMes() + '<div class="gris" style="font-size: 13px; margin-top: 4px">ingresos del mes ' + plata(r.totalIngresos) + '</div>';
       var pj = Math.round(r.parte.Juliana * 100);
       h += '<div style="margin-top: 18px; display: flex; height: 3px; gap: 3px"><div style="width: ' + (r.parte.Juliana * 100).toFixed(1) + '%; background: var(--tinta)"></div><div style="flex: 1; background: var(--tinta2)"></div></div>' +
         '<div class="fila mt8" style="font-size: 12px"><span>Juliana ' + pj + ' % · ' + plata(r.ingresos.Juliana) + '</span><span class="gris">Manuel ' + (100 - pj) + ' % · ' + plata(r.ingresos.Manuel) + '</span></div>';
       if (!r.totalIngresos) h += '<div class="gris mt8" style="font-size: 12px">Aún no hay ingresos este mes: por ahora se reparte mitad y mitad.</div>';
 
       h += '<div class="anillos">' + GRUPOS.slice(0, 3).map(function (g) {
-        var meta = metaGrupo(g, r), usado = r.gastoGrupo[g.n] || 0, p = pct(usado, meta);
+        var meta = metaGrupo(g, r, P), usado = r.gastoGrupo[g.n] || 0, p = pct(usado, meta);
         var lleno = g.n !== "Ahorro" && meta > 0 && usado >= meta;
         return '<button class="anillo' + (S.grupo === g.n ? " si" : "") + '" data-a="grupo" data-v="' + g.n + '" aria-label="' + g.n + ': ' + p + ' %">' + anillo(p, lleno) +
           '<span class="n">' + g.n + '</span><span class="s' + (lleno ? " shu" : "") + '">' + (lleno ? (usado > meta ? "se pasó" : "al límite") : Math.round(g.p * 100) + " % · " + plata(meta)) + '</span></button>';
       }).join("") + '</div>';
 
-      var hayPresupuesto = categorias().some(function (c) { return c.presupuesto > 0; }) || bolsillos().some(function (b) { return b.aporte > 0; });
-      h += hayPresupuesto
-        ? '<div style="text-align: right"><button class="enlace" data-a="ir" data-v="ajustes">editar presupuesto</button></div>'
-        : '<div class="caja mt16"><div class="etq-s">Presupuesto</div><div style="font-size: 14px; margin-top: 6px; line-height: 1.5">Aún no tienen presupuesto. Escriban cuánto esperan gastar en cada cosa este mes.</div>' +
-          '<button class="boton chico mt16" style="width: 100%" data-a="ir" data-v="ajustes">Armar el presupuesto</button></div>';
+      var mesNombre = nombreMes(S.mes);
+      if (P.origen === S.mes) {
+        h += '<div class="fila mt8" style="align-items: center"><span class="gris" style="font-size: 12px">Presupuesto ' + plata(P.total) + '</span><button class="enlace" data-a="ir" data-v="presupuesto">editar presupuesto</button></div>';
+      } else {
+        h += '<div class="caja mt16"><div class="etq-s">Presupuesto de ' + mesNombre + '</div><div style="font-size: 14px; margin-top: 6px; line-height: 1.5">' +
+          (P.origen ? "Aún no lo han armado. Por ahora se usa el de " + nombreMes(P.origen) + " (" + plata(P.total) + ")." : "Aún no lo han armado. Escriban cuánto esperan gastar en cada cosa.") + '</div>' +
+          '<button class="boton chico mt16" style="width: 100%" data-a="ir" data-v="presupuesto">Armar el presupuesto de ' + mesNombre + '</button></div>';
+      }
 
       GRUPOS.slice(3).forEach(function (g) {
         var usado = r.gastoGrupo[g.n] || 0;
@@ -485,8 +511,8 @@
 
       if (S.grupo) {
         var lista = S.grupo === "Ahorro"
-          ? bolsillos().map(function (b) { return { n: b.nombre, p: b.aporte, u: r.gastoCat[b.nombre] || 0 }; })
-          : categorias().filter(function (c) { return c.grupo === S.grupo; }).map(function (c) { return { n: c.nombre, p: c.presupuesto, u: r.gastoCat[c.nombre] || 0 }; });
+          ? bolsillos().map(function (b) { return { n: b.nombre, p: P.bols[b.nombre] || 0, u: r.gastoCat[b.nombre] || 0 }; })
+          : categorias().filter(function (c) { return c.grupo === S.grupo; }).map(function (c) { return { n: c.nombre, p: P.cat[c.nombre] || 0, u: r.gastoCat[c.nombre] || 0 }; });
         lista = lista.filter(function (x) { return x.p || x.u; }).sort(function (a, b) { return b.u - a.u; });
         h += '<div class="etq mt24">' + S.grupo + '</div><div class="lista mt8">' + (lista.length ? lista.map(function (x) {
           var pasa = x.p && x.u > x.p;
@@ -496,13 +522,13 @@
         }).join("") : '<div class="vacio">Nada este mes.</div>') + '</div>';
       }
 
-      var casa = categorias().filter(function (c) { return c.casa && c.grupo !== "Ingresos" && (c.presupuesto || r.casaCat[c.nombre]); });
+      var casa = categorias().filter(function (c) { return c.casa && c.grupo !== "Ingresos" && (P.cat[c.nombre] || r.casaCat[c.nombre]); });
       h += '<div class="etq" style="margin-top: 28px">Cuentas de la casa</div>' +
         '<div class="gris" style="font-size: 12px; margin-top: 4px">Cada uno pone según lo que ganó, no mitad y mitad.</div><div class="lista" style="margin-top: 4px">' +
         (casa.length ? casa.map(function (c) {
-          var pagado = r.casaCat[c.nombre] || 0, base = pagado || c.presupuesto;
+          var pagado = r.casaCat[c.nombre] || 0, base = pagado || P.cat[c.nombre] || 0;
           return '<div class="tres"><div><div style="font-size: 15px">' + esc(c.nombre) + '</div><div class="gris" style="font-size: 11px; margin-top: 2px">' +
-            (pagado ? "pagado " + plata(pagado) : "presupuesto " + plata(c.presupuesto)) + '</div></div>' +
+            (pagado ? "pagado " + plata(pagado) : "presupuesto " + plata(base)) + '</div></div>' +
             PERSONAS.map(function (p) { return '<div class="d"><span class="p">' + p.toUpperCase() + '</span><span class="mincho" style="font-size: 15px">' + plata(base * r.parte[p]) + '</span></div>'; }).join("") + '</div>';
         }).join("") : '<div class="vacio">Cuando paguen algo de la casa (o le pongan presupuesto), aquí sale cuánto le toca a cada uno.</div>') + '</div>';
 
@@ -612,31 +638,59 @@
       return { html: h, nav: "inicio" };
     }
 
+    function vPresupuesto() {
+      var P = presupuestoMes(S.mes), mesNombre = nombreMes(S.mes);
+      var r = delMes(S.mes);
+      var h = '<div class="fila" style="align-items: center"><button class="x" data-a="ir" data-v="mes" aria-label="Volver">' + ICONO_X + '</button><span class="etq">Presupuesto</span><span style="width: 44px"></span></div>' +
+        '<div class="mt16">' + selectorMes() + '</div>' +
+        '<div class="gris" style="font-size: 13px; line-height: 1.6; margin-top: 4px">' +
+        (P.origen === S.mes ? "Cuánto esperan gastar en cada cosa en " + mesNombre + "." :
+          P.origen ? "Viene igual al de " + nombreMes(P.origen) + ". Cambien lo que quieran y guarden." : "Escriban cuánto esperan gastar en cada cosa en " + mesNombre + ". Lo que dejen en blanco no tiene presupuesto.") + '</div>';
+      ["Necesidades", "Gustos", "Deudas", "Inversiones"].forEach(function (g) {
+        var cats = categorias().filter(function (c) { return c.grupo === g; });
+        if (!cats.length) return;
+        h += '<div class="etq-s mt24">' + g + (r.totalIngresos && GRUPOS.filter(function (x) { return x.n === g; })[0].p ? ' · ' + Math.round(GRUPOS.filter(function (x) { return x.n === g; })[0].p * 100) + ' % de lo ganado' : "") + '</div><div class="lista">' +
+          cats.map(function (c, i) {
+            var v = P.cat[c.nombre];
+            return '<div class="campo"><label for="pc' + g.slice(0, 2) + i + '" style="font-size: 14px">' + esc(c.nombre) + (c.casa ? ' <span class="gris" style="font-size: 11px">· casa</span>' : "") + '</label>' +
+              '<input id="pc' + g.slice(0, 2) + i + '" inputmode="numeric" placeholder="$ 0" data-plata data-pcat="' + esc(c.nombre) + '" value="' + (v ? "$ " + miles(v) : "") + '"></div>';
+          }).join("") + '</div>';
+      });
+      h += '<div class="etq-s mt24">Ahorro · cuánto apartar este mes</div><div class="lista">' + bolsillos().map(function (b, i) {
+        var v = P.bols[b.nombre];
+        return '<div class="campo"><label for="pb' + i + '" style="font-size: 14px">' + esc(b.nombre) + '</label>' +
+          '<input id="pb' + i + '" inputmode="numeric" placeholder="$ 0" data-plata data-pbols="' + esc(b.nombre) + '" value="' + (v ? "$ " + miles(v) : "") + '"></div>';
+      }).join("") + '</div>' +
+        '<div class="fila mt24"><span class="etq">Total</span><span class="mincho" style="font-size: 22px" id="totalPres">' + plata(P.total) + '</span></div>' +
+        (r.totalIngresos ? '<div class="gris" style="font-size: 12px; text-align: right; margin-top: 4px">ingresos del mes ' + plata(r.totalIngresos) + '</div>' : "") +
+        '<button class="boton mt24" data-a="guardarPresupuesto"' + (S.cargando ? " disabled" : "") + '>' + (S.cargando ? "Guardando…" : "Guardar presupuesto de " + mesNombre) + '</button>' +
+        (S.error && S.error !== "sin conexión" ? '<div class="shu mt8" style="font-size: 13px; text-align: center">' + esc(S.error) + '</div>' : "");
+      return { html: h, nav: false };
+    }
+
     function vAjustes() {
       var cats = D ? D.categorias : [], bols = D ? D.bolsillos : [];
       var h = '<div class="fila" style="align-items: center"><button class="x" data-a="ir" data-v="inicio" aria-label="Volver">' + ICONO_X + '</button><span class="etq">Ajustes</span><span style="width: 44px"></span></div>' +
         '<div class="etq-s mt24">En este celular eres</div>' + chips(PERSONAS, YO, "yo");
-      h += '<h2 class="mincho mt32" style="font-weight: 400; font-size: 24px; margin-bottom: 0">Presupuesto del mes</h2>' +
-        '<div class="gris" style="font-size: 12px; margin-top: 4px">Cuánto esperan gastar en cada cosa. "Casa" = se reparte según lo que gana cada uno.</div>';
+      h += '<h2 class="mincho mt32" style="font-weight: 400; font-size: 24px; margin-bottom: 0">Categorías</h2>' +
+        '<div class="gris" style="font-size: 12px; margin-top: 4px; line-height: 1.5">"Casa" = se reparte según lo que gana cada uno. El presupuesto de cada mes se arma en la pestaña Mes.</div>';
       ["Necesidades", "Gustos", "Deudas", "Inversiones", "Ingresos"].forEach(function (g) {
         h += '<div class="etq-s mt24">' + g + '</div><div class="lista">' + cats.map(function (c, i) {
           if (c.grupo !== g || c.activa === false) return "";
           var quitar = '<button class="x" style="width: 32px; height: 32px; justify-content: center; flex: none" data-a="quitarCat" data-v="' + i + '" aria-label="Quitar ' + esc(c.nombre) + '">' + ICONO_QUITAR + '</button>';
           if (g === "Ingresos") return '<div class="campo"><span style="flex: 1; font-size: 14px; padding: 6px 0">' + esc(c.nombre) + '</span>' + quitar + '</div>';
-          return '<div class="campo" style="gap: 8px"><label for="p' + i + '" style="flex: 1; font-size: 14px">' + esc(c.nombre) + '</label>' +
-            '<button class="chip' + (c.casa ? " si" : "") + '" style="height: 30px; padding: 0 10px; font-size: 12px" data-a="catCasa" data-v="' + i + '" aria-pressed="' + !!c.casa + '">casa</button>' +
-            '<input id="p' + i + '" style="width: 104px" inputmode="numeric" placeholder="$ 0" data-plata data-cat="' + i + '" value="' + (c.presupuesto ? "$ " + miles(c.presupuesto) : "") + '">' + quitar + '</div>';
+          return '<div class="campo" style="gap: 8px"><span style="flex: 1; font-size: 14px; padding: 6px 0">' + esc(c.nombre) + '</span>' +
+            '<button class="chip' + (c.casa ? " si" : "") + '" style="height: 30px; padding: 0 10px; font-size: 12px" data-a="catCasa" data-v="' + i + '" aria-pressed="' + !!c.casa + '">casa</button>' + quitar + '</div>';
         }).join("") + '</div>';
       });
       h += '<div class="etq-s mt24">Nueva categoría</div><input class="texto" id="nuevaCat" placeholder="Nombre" value="' + esc(S.nuevaCat || "") + '">' +
         chips(["Necesidades", "Gustos", "Deudas", "Inversiones", "Ingresos"], S.nuevoGrupo || "Necesidades", "nuevoGrupo");
       h += '<h2 class="mincho mt32" style="font-weight: 400; font-size: 24px; margin-bottom: 0">Bolsillos</h2>' +
-        '<div class="bols2" style="border: 0; padding-bottom: 0; grid-template-columns: 1fr 92px 92px 32px"><span></span><span class="etq-s" style="text-align: right; letter-spacing: 1px">Meta</span><span class="etq-s" style="text-align: right; letter-spacing: 1px">Al mes</span><span></span></div>' +
+        '<div class="bols2" style="border: 0; padding-bottom: 0; grid-template-columns: 1fr 120px 32px"><span></span><span class="etq-s" style="text-align: right; letter-spacing: 1px">Meta</span><span></span></div>' +
         bols.map(function (b, i) {
           if (b.activo === false) return "";
-          return '<div class="bols2" style="grid-template-columns: 1fr 92px 92px 32px"><span style="font-size: 14px">' + esc(b.nombre) + '</span>' +
-            '<input inputmode="numeric" placeholder="$ 0" aria-label="Meta de ' + esc(b.nombre) + '" data-plata data-meta="' + i + '" value="' + (b.meta ? "$ " + miles(b.meta) : "") + '">' +
-            '<input inputmode="numeric" placeholder="$ 0" aria-label="Aporte al mes de ' + esc(b.nombre) + '" data-plata data-aporte="' + i + '" value="' + (b.aporte ? "$ " + miles(b.aporte) : "") + '">' +
+          return '<div class="bols2" style="grid-template-columns: 1fr 120px 32px"><span style="font-size: 14px">' + esc(b.nombre) + '</span>' +
+            '<input inputmode="numeric" placeholder="sin meta" aria-label="Meta de ' + esc(b.nombre) + '" data-plata data-meta="' + i + '" value="' + (b.meta ? "$ " + miles(b.meta) : "") + '">' +
             '<button class="x" style="width: 32px; height: 32px; justify-content: center" data-a="quitarBols" data-v="' + i + '" aria-label="Quitar ' + esc(b.nombre) + '">' + ICONO_QUITAR + '</button></div>';
         }).join("") +
         '<input class="texto mt8" id="nuevoBols" placeholder="Nuevo bolsillo (nombre)" value="' + esc(S.nuevoBols || "") + '">';
@@ -659,7 +713,7 @@
       if (!YO || (!PRUEBA && !CLAVE) || S.pantalla === "entrar") v = vEntrar();
       else if (!D) v = { html: '<div class="cargando"><div class="sello estampa" style="margin: 0 auto">家計</div><div class="gris mt16" style="font-size: 13px">' + (S.error || "Cargando…") + '</div></div>', nav: false };
       else if (!D.ajustes || !D.ajustes.iniciado || S.pantalla === "empezar") { if (!W) W = nuevoW(); v = vEmpezar(); }
-      else v = ({ inicio: vInicio, mes: vMes, bolsillos: vBolsillos, anotar: vAnotar, historial: vHistorial, ajustes: vAjustes, saldo: vSaldo }[S.pantalla] || vInicio)();
+      else v = ({ inicio: vInicio, mes: vMes, bolsillos: vBolsillos, anotar: vAnotar, historial: vHistorial, ajustes: vAjustes, saldo: vSaldo, presupuesto: vPresupuesto }[S.pantalla] || vInicio)();
       document.getElementById("raiz").innerHTML = '<main class="app' + (v.nav ? "" : " sin-nav") + '">' + v.html + '</main>' + (v.nav ? nav(v.nav) : "");
       if (foco && document.getElementById(foco)) document.getElementById(foco).focus();
     }
@@ -760,6 +814,17 @@
         sincronizar();
       },
       mes: function (v) { S.mes = moverMes(S.mes, Number(v)); S.grupo = ""; pintar(); },
+      mesHoy: function () { S.mes = mesActual(); S.grupo = ""; pintar(); },
+      guardarPresupuesto: function () {
+        var items = [];
+        document.querySelectorAll("[data-pcat]").forEach(function (el) { items.push({ tipo: "Categoría", nombre: el.dataset.pcat, valor: digitos(el.value) }); });
+        document.querySelectorAll("[data-pbols]").forEach(function (el) { items.push({ tipo: "Bolsillo", nombre: el.dataset.pbols, valor: digitos(el.value) }); });
+        var mes = S.mes;
+        S.cargando = true; S.error = ""; pintar();
+        llamar("guardarPresupuesto", { mes: mes, items: items })
+          .then(function (j) { recibir(j); S.cargando = false; S.pantalla = "mes"; pintar(); window.scrollTo(0, 0); avisar("Presupuesto de " + nombreMes(mes) + " guardado"); })
+          .catch(function () { S.cargando = false; S.error = "No se pudo guardar. Revisa el internet."; pintar(); });
+      },
       grupo: function (v) { S.grupo = S.grupo === v ? "" : v; pintar(); },
       saldar: function (v, el) {
         A = nuevoA("Traslado");
@@ -840,9 +905,7 @@
     // Lo escrito en Ajustes se guarda en D antes de volver a pintar, para no perderlo
     function leerAjustes() {
       var raiz = document.getElementById("raiz");
-      raiz.querySelectorAll("[data-cat]").forEach(function (el) { D.categorias[Number(el.dataset.cat)].presupuesto = digitos(el.value); });
       raiz.querySelectorAll("[data-meta]").forEach(function (el) { D.bolsillos[Number(el.dataset.meta)].meta = digitos(el.value); });
-      raiz.querySelectorAll("[data-aporte]").forEach(function (el) { D.bolsillos[Number(el.dataset.aporte)].aporte = digitos(el.value); });
       var nc = document.getElementById("nuevaCat"), nb = document.getElementById("nuevoBols");
       if (nc) S.nuevaCat = nc.value;
       if (nb) S.nuevoBols = nb.value;
@@ -862,6 +925,12 @@
     document.addEventListener("input", function (e) {
       var el = e.target;
       if (el.hasAttribute("data-plata")) { var n = digitos(el.value); el.value = n ? "$ " + miles(n) : ""; }
+      var tot = document.getElementById("totalPres");
+      if (tot && (el.dataset.pcat || el.dataset.pbols)) {
+        var t = 0;
+        document.querySelectorAll("[data-pcat], [data-pbols]").forEach(function (x) { t += digitos(x.value); });
+        tot.textContent = plata(t);
+      }
       if (el.dataset.a2 === "nota" && A) A.nota = el.value;
     });
     document.addEventListener("change", function (e) {

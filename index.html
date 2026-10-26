@@ -241,7 +241,20 @@
     }
     .campos input:focus, .campos select:focus, .campos textarea:focus { outline: none; border-color: var(--real); background: #fff; }
     .campos textarea { resize: vertical; }
+    .campos .opcional { font-weight: 500; color: var(--texto-suave); }
     .trampa { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+
+    /* Casillas de autorización: una por documento, sin marcar */
+    .casillas { border: 0; margin-top: 26px; display: grid; gap: 12px; }
+    .casillas legend { font-weight: 800; font-size: 1.05rem; margin-bottom: 12px; }
+    .casilla {
+      display: flex; gap: 12px; align-items: flex-start; cursor: pointer;
+      background: var(--fondo); border-radius: 14px; padding: 14px 16px; font-size: .94rem; color: var(--texto-suave);
+    }
+    .casilla input { flex: none; width: 22px; height: 22px; margin-top: 1px; accent-color: var(--medianoche); cursor: pointer; }
+    .casilla a { color: var(--real); font-weight: 700; }
+    .casilla em { display: block; font-style: normal; font-size: .85rem; margin-top: 4px; opacity: .85; }
+    .nota-legal { color: var(--texto-suave); font-size: .88rem; margin-top: 22px; }
     .aviso { color: var(--texto-suave); font-size: .85rem; margin: 18px 0; }
     .error { color: #c0392b; font-weight: 600; margin-top: 14px; }
     .listo { text-align: center; padding: 30px 0; }
@@ -455,11 +468,35 @@
                   <option>No estoy seguro/a</option>
                 </select>
               </label>
-              <label class="ancho">Dolor o motivo de consulta<textarea name="motivo" rows="4" required placeholder="Cuéntanos qué te duele o qué quieres mejorar, y desde hace cuánto"></textarea></label>
+              <label class="ancho">
+                <span>Dolor o motivo de consulta <span class="opcional">(opcional)</span></span>
+                <textarea name="motivo" rows="4" placeholder="Si quieres, cuéntanos qué te duele o qué quieres mejorar, y desde hace cuánto. También nos lo puedes contar el día de la cita."></textarea>
+              </label>
               <!-- campo trampa contra robots: las personas no lo ven -->
               <input name="sitio" tabindex="-1" autocomplete="off" class="trampa" aria-hidden="true" />
             </div>
-            <p class="aviso">Usamos tus datos solo para gestionar tu cita.</p>
+            <!-- Una casilla por documento, sin marcar. Lo que marque la persona queda guardado como prueba. -->
+            <fieldset class="casillas">
+              <legend>Antes de enviar</legend>
+              <label class="casilla">
+                <input type="checkbox" name="terminos" required />
+                <span>Acepto los <a href="terminos.html" target="_blank" rel="noopener">Términos y condiciones</a>.</span>
+              </label>
+              <label class="casilla">
+                <input type="checkbox" name="privacidad" required />
+                <span>Autorizo el uso de mis datos personales según la <a href="privacidad.html" target="_blank" rel="noopener">Política de privacidad</a>.</span>
+              </label>
+              <label class="casilla">
+                <input type="checkbox" name="salud" />
+                <span>Autorizo el uso de los datos de salud que escribí arriba, solo para preparar mi atención. Sé que son <a href="privacidad.html#salud" target="_blank" rel="noopener">datos sensibles</a> y que no estoy obligado(a) a darlos.
+                  <em>Solo es necesaria si escribiste algo en "Dolor o motivo de consulta".</em></span>
+              </label>
+              <label class="casilla">
+                <input type="checkbox" name="mayor" required />
+                <span>Soy mayor de edad, o soy el padre, la madre o el acudiente de quien va a recibir la terapia.</span>
+              </label>
+            </fieldset>
+            <p class="aviso">Usamos tus datos solo para gestionar tu cita y tu atención. No los vendemos ni los usamos para publicidad.</p>
             <button class="boton boton-oscuro" type="submit" id="enviar">Enviar solicitud</button>
             <p class="error" id="error" hidden></p>
           </form>
@@ -562,6 +599,7 @@
             <div class="cierre">Sé constante y empieza desde donde estés.</div>
           </article>
         </div>
+        <p class="nota-legal">Estos tips son información general: no reemplazan una valoración. Si tienes dolor o una lesión, consúltanos antes de hacerlos.</p>
         <div class="redes">
           <a class="boton boton-claro" href="https://www.instagram.com/fisio.axisbymj/" target="_blank" rel="noopener">Instagram @fisio.axisbymj</a>
           <a class="boton boton-claro" href="https://www.tiktok.com/@fisio.axisbymj" target="_blank" rel="noopener">TikTok @fisio.axisbymj</a>
@@ -589,8 +627,11 @@
         <a class="wa" href="#">WhatsApp +57 318 705 4427</a>
         <a href="https://www.instagram.com/fisio.axisbymj/" target="_blank" rel="noopener">Instagram</a>
         <a href="https://www.tiktok.com/@fisio.axisbymj" target="_blank" rel="noopener">TikTok</a>
+        <a href="terminos.html">Términos y condiciones</a>
+        <a href="privacidad.html">Política de privacidad</a>
       </nav>
-      <small>Fisioterapia a domicilio en Bogotá · © <span id="anio">2026</span> Axis by MJ</small>
+      <small>Fisioterapia a domicilio en Bogotá · Manuel Enrique Gómez Salas y Juliana Bravo Román, fisioterapeutas ·
+        <a href="mailto:axisbymj.physio@gmail.com">axisbymj.physio@gmail.com</a> · © <span id="anio">2026</span> Axis by MJ</small>
     </div>
   </footer>
 
@@ -614,6 +655,10 @@
     // Dirección del programa de Google (Apps Script) que guarda las citas en el Google Calendar de
     // axisbymj.physio@gmail.com. Mientras esté vacía, el calendario funciona en "modo de prueba".
     var URL_RESERVAS = "https://script.google.com/macros/s/AKfycbz_ci6rzgGCiMc2pQqcd1db88Cpu5Aet36t7Zss71NZFO4xzZMrDA-lOWlrwDcRhQg/exec";
+
+    // Fecha de la versión de cada documento que acepta la persona. Si se cambia terminos.html o
+    // privacidad.html, poner aquí la fecha nueva (y guardar la versión anterior).
+    var VERSION_LEGAL = { terminos: "2026-10-26", privacidad: "2026-10-26" };
 
     var HORARIO = {
       dias: [1, 2, 3, 4, 5, 6], // lunes a sábado (0 = domingo)
@@ -744,16 +789,34 @@
     };
     $("cambiar").onclick = function () { mostrar("paso-fecha"); };
 
-    $("paso-datos").onsubmit = function (ev) {
+    // La casilla de datos de salud solo es obligatoria si la persona escribió algo sobre su salud
+    var formulario = $("paso-datos");
+    formulario.elements.motivo.oninput = function () {
+      formulario.elements.salud.required = this.value.trim() !== "";
+    };
+
+    formulario.onsubmit = function (ev) {
       ev.preventDefault();
       var f = ev.target, datos = { inicio: cita };
       ["nombre", "apellidos", "celular", "correo", "direccion", "servicio", "motivo", "sitio"].forEach(function (k) {
         datos[k] = f.elements[k].value.trim();
       });
+      // Prueba de la autorización: qué marcó, qué versión de los documentos vio y desde dónde
+      datos.acepta = {
+        terminos: f.elements.terminos.checked,
+        privacidad: f.elements.privacidad.checked,
+        salud: f.elements.salud.checked,
+        mayor: f.elements.mayor.checked,
+        versionTerminos: VERSION_LEGAL.terminos,
+        versionPrivacidad: VERSION_LEGAL.privacidad,
+        navegador: navigator.userAgent,
+        pagina: location.href,
+      };
       var listo = function () {
         $("listo-texto").textContent = "Pediste tu cita para el " + textoCita().toLowerCase() +
           ". La revisaremos y te escribiremos a " + datos.correo + " o por WhatsApp para confirmarla.";
         f.reset();
+        f.elements.salud.required = false;
         mostrar("paso-listo");
       };
       if (datos.sitio) return listo(); // robot
@@ -767,6 +830,8 @@
           if (r.ok) { ocupado.push([cita, cita.slice(0, 11) + dos(+cita.slice(11, 13) + 1) + ":00"]); pintarMes(); return listo(); }
           var msg = r.error === "ocupado"
             ? "Alguien acaba de tomar esa hora. Por favor elige otra."
+            : r.error === "autorizacion"
+            ? "Revisa las casillas de autorización: sin ellas no podemos guardar tu solicitud."
             : "No pudimos enviar tu solicitud. Revisa los datos o escríbenos por WhatsApp.";
           $("error").textContent = msg;
           $("error").hidden = false;

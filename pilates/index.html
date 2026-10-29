@@ -49,6 +49,8 @@
     h2 { font-size: 1.05rem; margin-bottom: 4px; }
     .sub { color: var(--suave); font-size: .82rem; }
     .mano { font-family: "Dancing Script", cursive; color: var(--real); font-size: 1.35rem; }
+    .editando { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #e6f3fa; color: var(--real); border-radius: 18px; padding: 10px 10px 10px 16px; font-size: .82rem; font-weight: 700; margin-bottom: 16px; }
+    .editando .enlace { flex: none; }
     .prueba { background: var(--ambar-f); color: var(--ambar); border-radius: 18px; padding: 12px 16px; font-size: .82rem; font-weight: 600; margin-bottom: 16px; }
 
     .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
@@ -226,6 +228,7 @@
 
       <!-- ARMAR -->
       <section data-vista="armar">
+        <div class="editando oculto" id="avisoEditando"><span id="textoEditando"></span><button class="enlace" id="cancelarEdicion">Cancelar</button></div>
         <div id="formulario">
           <div class="tarjeta">
             <h2>¿En qué máquina?</h2>
@@ -269,7 +272,8 @@
             </div>
           </div>
           <div id="pasos"></div>
-          <div class="botones" style="margin:6px 0 10px">
+          <button class="boton ancho" id="cambiarAlumnas" style="margin:6px 0 10px;background:var(--blanco)">👥 Cambiar estudiantes o fecha</button>
+          <div class="botones" style="margin-bottom:10px">
             <button class="boton" id="sortear">🎲 Sortear otra</button>
             <button class="boton" id="editarOpciones">✏️ Cambiar opciones</button>
           </div>
@@ -355,6 +359,7 @@
       fecha: hoyISO(),
     };
     var C = leer("axis-pil-borrador"); // la clase armada que aún no se ha guardado
+    var EDITA = leer("axis-pil-editando"); // ID de la clase guardada que se está editando (null = clase nueva)
     var semana = 0;
     var filtroMaq = "Todas";
 
@@ -400,11 +405,13 @@
       var mensaje = "";
       if (accion === "guardarClase") {
         var c = d.clase;
-        extra.clases.push(Object.assign({}, c, {
-          id: "P" + Date.now(), dia: DIAS[deISO(c.fecha).getDay()], dolor1: c.dolor1.join(", "), dolor2: c.dolor2.join(", "),
+        var nueva = Object.assign({}, c, {
+          id: c.id || "P" + Date.now(), dia: DIAS[deISO(c.fecha).getDay()], dolor1: c.dolor1.join(", "), dolor2: c.dolor2.join(", "),
           maquinas: c.maquinas.join(", "), circuito: c.circuito ? "Sí" : "No",
-        }));
-        mensaje = "Clase guardada: " + bonita(c.fecha);
+        });
+        var donde = extra.clases.map(function (x) { return x.id; }).indexOf(c.id);
+        if (c.id && donde >= 0) extra.clases[donde] = nueva; else extra.clases.push(nueva);
+        mensaje = d.mensaje || (c.id ? "Cambios guardados: " : "Clase guardada: ") + bonita(c.fecha);
       }
       if (accion === "borrarClase") { extra.clases = extra.clases.filter(function (x) { return x.id !== d.id; }); mensaje = "Clase borrada"; }
       if (accion === "guardarEjercicio") {
@@ -455,6 +462,7 @@
     function pintarTodo() {
       pintarFormulario();
       if (C) pintarClase();
+      pintarEditando();
       pintarSemana();
       pintarAlumnas();
       pintarEjercicios();
@@ -485,14 +493,17 @@
         return '<button data-q="' + esc(q) + '" class="' + (F.equipos.indexOf(q) >= 0 ? "activo" : "") + '">' + esc(q) + "</button>";
       }).join("");
       document.querySelectorAll("#nivel button").forEach(function (b) { b.classList.toggle("activo", b.dataset.nivel === F.nivel); });
-      $("alumnas").innerHTML = F.alumnas.map(function (a, i) {
+      $("alumnas").innerHTML = htmlAlumnas(F.alumnas);
+      $("fecha").value = F.fecha;
+    }
+    function htmlAlumnas(lista) {
+      return lista.map(function (a, i) {
         return '<div class="alumna"><div class="fila-nombre"><span class="num">' + (i + 1) + '</span>' +
           '<input list="nombres" data-nombre="' + i + '" placeholder="Estudiante ' + (i + 1) + ' (opcional)" value="' + esc(a.nombre) + '" autocomplete="off" /></div>' +
           '<p class="pregunta">¿Dolor o molestia?</p><div class="chips pequenos dolor">' +
           R.ZONAS.map(function (z) { return '<button data-a="' + i + '" data-z="' + esc(z) + '" class="' + (a.zonas.indexOf(z) >= 0 ? "activo" : "") + '">' + esc(z) + "</button>"; }).join("") +
           "</div></div>";
       }).join("");
-      $("fecha").value = F.fecha;
     }
 
     $("maquinas").addEventListener("click", function (e) {
@@ -525,7 +536,8 @@
     $("alumnas").addEventListener("input", function (e) { if (e.target.dataset.nombre) F.alumnas[e.target.dataset.nombre].nombre = e.target.value; });
     $("fecha").addEventListener("change", function () { F.fecha = $("fecha").value || hoyISO(); });
 
-    function historial() { return D.clases; }
+    // la clase que se está editando no cuenta como "reciente" (si no, la app evitaría sus propios ejercicios)
+    function historial() { return D.clases.filter(function (c) { return c.id !== EDITA; }); }
     function nombreAlumna(i, op) { var n = ((op || C.opciones).alumnas[i] || {}).nombre; return n && n.trim() ? n.trim() : "Estudiante " + (i + 1); }
 
     function opcionesForm() {
@@ -627,7 +639,61 @@
       $("minutosClase").textContent = C.minutos;
       $("pasos").innerHTML = htmlPasos(C, null, true);
       $("sortear").textContent = op.manual ? "✨ Que la app la arme" : "🎲 Sortear otra";
+      $("guardarClase").textContent = textoGuardar();
     }
+    function textoGuardar() { return EDITA ? "💾 Guardar cambios" : "💾 Guardar clase"; }
+
+    // ——— Editar una clase ya guardada ———
+    function ponerEdita(id) { EDITA = id || null; guardar("axis-pil-editando", EDITA); pintarEditando(); }
+    function pintarEditando() {
+      var c = EDITA ? D.clases.filter(function (x) { return x.id === EDITA; })[0] : null;
+      if (EDITA && D.clases.length && !c) { EDITA = null; guardar("axis-pil-editando", null); } // la borraron
+      $("avisoEditando").classList.toggle("oculto", !EDITA);
+      if (c) $("textoEditando").textContent = "✏️ Editando la clase de " + nombresDe(c) + " · " + bonita(c.fecha);
+      $("guardarClase").textContent = textoGuardar();
+    }
+    function nombresDe(c) { var n = [c.estudiante1, c.estudiante2].filter(Boolean); return n.length ? n.join(" y ") : "Clase dual"; }
+    $("cancelarEdicion").addEventListener("click", function () {
+      ponerEdita(null);
+      C = null; guardar("axis-pil-borrador", null);
+      F.alumnas = [{ nombre: "", zonas: [] }, { nombre: "", zonas: [] }]; F.fecha = hoyISO();
+      $("resultado").classList.add("oculto"); $("formulario").classList.remove("oculto");
+      pintarFormulario(); aviso("No se cambió nada");
+    });
+
+    // Una clase guardada vuelve a quedar armada para cambiarla (los nombres salen de la hoja, por si los corrigieron allá)
+    function desdeGuardada(c) {
+      var op = JSON.parse(JSON.stringify(c.detalle.opciones));
+      op.fecha = c.fecha; op.hoy = c.fecha;
+      op.alumnas = [0, 1].map(function (k) {
+        var a = (op.alumnas || [])[k] || {};
+        return { nombre: String([c.estudiante1, c.estudiante2][k] || "").trim(), zonas: (a.zonas || []).slice() };
+      });
+      return R.ajustar({ opciones: op, pasos: JSON.parse(JSON.stringify(c.detalle.pasos)) }, D.ejercicios);
+    }
+
+    // Cambiar nombres, zonas de dolor o fecha sin perder los ejercicios
+    function hojaAlumnas(titulo) {
+      var lista = C.opciones.alumnas.map(function (a) { return { nombre: a.nombre || "", zonas: (a.zonas || []).slice() }; });
+      abrirHoja("<h3>" + esc(titulo) + '</h3><p class="sub">Los ejercicios quedan iguales. Si cambias el dolor, la app vuelve a revisar qué le sirve a cada una.</p>' +
+        '<div id="hAlumnas">' + htmlAlumnas(lista) + "</div>" +
+        '<label class="campo"><span>Fecha de la clase</span><input type="date" id="hFecha" value="' + esc(C.opciones.fecha) + '" /></label>' +
+        '<button class="boton principal ancho" id="hListo" style="margin-top:20px">Listo</button>');
+      $("hAlumnas").onclick = function (e) {
+        var b = e.target.closest("button[data-z]"); if (!b) return;
+        var a = lista[b.dataset.a], i = a.zonas.indexOf(b.dataset.z);
+        if (i >= 0) a.zonas.splice(i, 1); else a.zonas.push(b.dataset.z);
+        b.classList.toggle("activo");
+      };
+      $("hAlumnas").oninput = function (e) { if (e.target.dataset.nombre) lista[e.target.dataset.nombre].nombre = e.target.value; };
+      $("hListo").onclick = function () {
+        var fecha = $("hFecha").value || C.opciones.fecha;
+        C = R.cambiarAlumnas(D.ejercicios, C, lista.map(function (a) { return { nombre: a.nombre.trim(), zonas: a.zonas }; }), historial());
+        C.opciones.fecha = fecha; C.opciones.hoy = fecha;
+        guardar("axis-pil-borrador", C); cerrarHoja(); pintarClase();
+      };
+    }
+    $("cambiarAlumnas").addEventListener("click", function () { hojaAlumnas("Estudiantes y fecha"); });
 
     function cambiarClase(nueva) { C = nueva; guardar("axis-pil-borrador", C); pintarClase(); }
 
@@ -738,30 +804,36 @@
       pintarFormulario(); window.scrollTo(0, 0);
     });
 
+    // Lo que se manda a la hoja. Con id = se corrige esa clase; sin id = clase nueva.
+    function filaDe(clase, id, nombresViejos) {
+      var op = clase.opciones, ids = [], nombres = {};
+      var nombre = function (x) { return (porId(x) || {}).nombre || (nombresViejos || {})[x] || x; };
+      clase.pasos.forEach(function (p) {
+        ids.push(p.id); nombres[p.id] = nombre(p.id);
+        (p.alumnas || []).forEach(function (a) { if (a.reemplazo) { ids.push(a.reemplazo); nombres[a.reemplazo] = nombre(a.reemplazo); } });
+      });
+      return {
+        id: id || "", fecha: op.fecha, estudiante1: op.alumnas[0].nombre, dolor1: op.alumnas[0].zonas, estudiante2: op.alumnas[1].nombre, dolor2: op.alumnas[1].zonas,
+        maquinas: op.maquinas, circuito: op.circuito, nivel: op.nivel, minutos: clase.minutos, ejercicios: ids,
+        detalle: { opciones: op, pasos: clase.pasos, nombres: nombres },
+      };
+    }
+
     $("guardarClase").addEventListener("click", function () {
       if (!C.pasos.length) return aviso("Agrega al menos un ejercicio", true);
-      var op = C.opciones, ids = [], nombres = {};
-      C.pasos.forEach(function (p) {
-        ids.push(p.id); nombres[p.id] = (porId(p.id) || {}).nombre;
-        p.alumnas.forEach(function (a) { if (a.reemplazo) { ids.push(a.reemplazo); nombres[a.reemplazo] = (porId(a.reemplazo) || {}).nombre; } });
-      });
-      var clase = {
-        fecha: op.fecha, estudiante1: op.alumnas[0].nombre, dolor1: op.alumnas[0].zonas, estudiante2: op.alumnas[1].nombre, dolor2: op.alumnas[1].zonas,
-        maquinas: op.maquinas, circuito: op.circuito, nivel: op.nivel, minutos: C.minutos, ejercicios: ids,
-        detalle: { opciones: op, pasos: C.pasos, nombres: nombres },
-      };
+      var clase = filaDe(C, EDITA);
       var b = $("guardarClase"); b.disabled = true; b.textContent = "Guardando…";
       api("guardarClase", { clase: clase })
         .then(function (r) {
           aviso(r.mensaje || "Clase guardada");
-          C = null; guardar("axis-pil-borrador", null);
+          C = null; guardar("axis-pil-borrador", null); ponerEdita(null);
           F.alumnas = [{ nombre: "", zonas: [] }, { nombre: "", zonas: [] }]; F.fecha = hoyISO();
           $("resultado").classList.add("oculto"); $("formulario").classList.remove("oculto");
           semana = semanaDe(clase.fecha);
           pintarTodo(); ir("semana");
         })
         .catch(function (e) { aviso(e.message || "No se pudo guardar", true); })
-        .then(function () { b.disabled = false; b.textContent = "💾 Guardar clase"; });
+        .then(function () { b.disabled = false; b.textContent = textoGuardar(); });
     });
 
     // ——— Semana ———
@@ -804,22 +876,45 @@
       [[c.estudiante1, c.dolor1, 1], [c.estudiante2, c.dolor2, 2]].forEach(function (a) {
         if (a[1]) h += '<div class="nota rojo"><b>' + esc(a[0] || "Estudiante " + a[2]) + ":</b> " + esc(String(a[1]).toLowerCase()) + "</div>";
       });
-      if (c.detalle && c.detalle.pasos) {
-        var clase = { pasos: c.detalle.pasos, opciones: c.detalle.opciones };
-        h += htmlPasos(clase, c.detalle.nombres, false);
-        h += '<button class="boton principal ancho" id="repetirClase" style="margin-top:16px">🔁 Usar esta clase otra vez</button>';
+      var completa = !!(c.detalle && c.detalle.pasos && c.detalle.opciones);
+      if (completa) {
+        h += htmlPasos({ pasos: c.detalle.pasos, opciones: c.detalle.opciones }, c.detalle.nombres, false);
+        h += '<button class="boton principal ancho" id="editarClase" style="margin-top:16px">✏️ Editar esta clase</button>';
+        h += '<button class="boton ancho" id="repetirClase" style="margin-top:10px">🔁 Usarla con otras estudiantes u otro día</button>';
       }
-      h += '<button class="boton rojo ancho" id="borrarClase" style="margin-top:10px">Borrar esta clase</button>';
+      // con las dos estudiantes: se puede sacar a una sola y la clase le queda a la otra
+      if (completa && n.length === 2) [c.estudiante1, c.estudiante2].forEach(function (nombre, k) {
+        h += '<button class="boton rojo ancho" data-sacar="' + k + '" style="margin-top:10px">Quitar a ' + esc(nombre) + " de esta clase</button>";
+      });
+      h += '<button class="boton rojo ancho" id="borrarClase" style="margin-top:10px">' + (n.length === 2 ? "Borrar la clase para las dos" : "Borrar esta clase") + "</button>";
       abrirHoja(h);
-      var rep = $("repetirClase");
-      if (rep) rep.onclick = function () {
-        var op = JSON.parse(JSON.stringify(c.detalle.opciones));
-        op.fecha = hoyISO(); op.hoy = op.fecha;
-        C = R.ajustar({ opciones: op, pasos: JSON.parse(JSON.stringify(c.detalle.pasos)) }, D.ejercicios);
-        guardar("axis-pil-borrador", C); cerrarHoja(); pintarClase(); ir("armar");
-      };
+      if (completa) {
+        $("editarClase").onclick = function () {
+          C = desdeGuardada(c); ponerEdita(c.id);
+          guardar("axis-pil-borrador", C); cerrarHoja(); pintarClase(); ir("armar");
+        };
+        $("repetirClase").onclick = function () {
+          C = desdeGuardada(c); ponerEdita(null);
+          C.opciones.fecha = hoyISO(); C.opciones.hoy = C.opciones.fecha;
+          guardar("axis-pil-borrador", C); pintarClase(); ir("armar");
+          hojaAlumnas("¿Para quiénes es esta clase?");
+        };
+      }
+      document.querySelectorAll("#contenidoHoja [data-sacar]").forEach(function (b) {
+        b.onclick = function () {
+          var k = Number(b.dataset.sacar), nombre = [c.estudiante1, c.estudiante2][k], otra = [c.estudiante1, c.estudiante2][1 - k];
+          if (!confirm("¿Quitar a " + nombre + " de esta clase? A " + otra + " le queda igual.")) return;
+          var clase = desdeGuardada(c), lista = clase.opciones.alumnas.slice();
+          lista[k] = { nombre: "", zonas: [] };
+          clase = R.cambiarAlumnas(D.ejercicios, clase, lista, D.clases.filter(function (x) { return x.id !== c.id; }));
+          b.disabled = true;
+          api("guardarClase", { clase: filaDe(clase, c.id, c.detalle.nombres), mensaje: nombre + " ya no está en esta clase" })
+            .then(function (r) { aviso(r.mensaje); cerrarHoja(); pintarTodo(); })
+            .catch(function (e) { aviso(e.message, true); b.disabled = false; });
+        };
+      });
       $("borrarClase").onclick = function () {
-        if (!confirm("¿Borrar esta clase? No se puede deshacer.")) return;
+        if (!confirm(n.length === 2 ? "¿Borrar esta clase para " + n.join(" y ") + "? No se puede deshacer." : "¿Borrar esta clase? No se puede deshacer.")) return;
         api("borrarClase", { id: c.id }).then(function (r) { aviso(r.mensaje || "Clase borrada"); cerrarHoja(); pintarTodo(); })
           .catch(function (e) { aviso(e.message, true); });
       };

@@ -383,10 +383,34 @@
     return ajustar({ opciones: clase.opciones, pasos: pasos });
   }
 
+  // Cambian las estudiantes o sus zonas de dolor (clase guardada que se edita o se usa con otras):
+  // los mismos ejercicios, pero las notas de cada una se vuelven a calcular. Si a alguna ya le habían
+  // puesto un reemplazo y lo sigue necesitando, se le deja el mismo.
+  function cambiarAlumnas(ejercicios, clase, alumnas, historial) {
+    var op = Object.assign({}, clase.opciones, { alumnas: alumnas });
+    var A = new Armador(ejercicios, op, historial);
+    var usados = usadosEn(clase);
+    var pasos = clase.pasos.map(function (viejo) {
+      var ej = buscarEj(ejercicios, viejo.id);
+      if (!ej) return Object.assign({}, viejo);
+      var p = Object.assign({}, viejo);
+      p.alumnas = A.estados(ej).map(function (s, i) {
+        var a = { estado: s.estado, zonas: s.zonas }, antes = (viejo.alumnas || [])[i] || {};
+        if (s.estado === "E") {
+          a.reemplazo = antes.estado === "E" && antes.reemplazo ? antes.reemplazo : A.reemplazo(ej, i, usados);
+          if (a.reemplazo) usados[a.reemplazo] = true;
+        }
+        return a;
+      });
+      return p;
+    });
+    return ajustar({ opciones: op, pasos: pasos }, ejercicios);
+  }
+
   var api = {
     ZONAS: ZONAS, MAQUINAS: MAQUINAS, FASES: FASES, NIVELES: NIVELES, POSICIONES: POSICIONES, MINUTOS: MINUTOS,
     estadoPara: estadoPara, armar: armar, cambiar: cambiar, agregar: agregar, reemplazar: reemplazar, quitar: quitar,
-    claveResortes: claveResortes, normalizar: normalizar, ajustar: ajustar,
+    claveResortes: claveResortes, normalizar: normalizar, ajustar: ajustar, cambiarAlumnas: cambiarAlumnas,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else raiz.Rutina = api;

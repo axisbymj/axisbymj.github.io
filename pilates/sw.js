@@ -1,6 +1,6 @@
 // Permite instalar la app en el celular y abrirla aunque el internet esté lento.
 // Siempre intenta traer la versión nueva; si no hay conexión, usa la última guardada.
-const CACHE = "axis-pilates-v6";
+const CACHE = "axis-pilates-v7";
 
 self.addEventListener("install", (e) => {
   self.skipWaiting();
